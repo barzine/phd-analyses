@@ -1,0 +1,229 @@
+---
+title: "Chap 2: Datasets"
+author: "Mitra Barzine"
+date: "6 February 2020"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+    theme: united
+    highlight: pygments
+    smart: true
+    css: styles.css
+    includes:
+      after_body: footer.html
+    runtime: shiny
+---
+
+```{r setup}
+suppressPackageStartupMessages(library(barzinePhdR))
+suppressPackageStartupMessages(library(barzinePhdData))
+suppressPackageStartupMessages(library(DT))
+```
+
+```{r moreFunctions}
+custom_datatable<-function(x){
+  DT::datatable(read.table(
+    system.file("extdata", paste0(x,"_map.tsv"), package = "barzinePhdData")
+    ,header=TRUE, sep="\t")[,-1],rownames=FALSE,
+                extensions = c('Responsive','Buttons'),
+                options = list(pageLength = 15, 
+                               dom='Blfrtip',
+                               buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+  ))
+}
+```
+
+
+This thesis studies human gene expression in non-diseased tissues.
+
+It includes five transcriptomic RNA-Seq-based datasets and three proteomic MS-based one.
+
+
+# Transcriptomic RNA-seq datasets
+
+Each RNA-Seq dataset has been: 
+ - quantified by HTSEq and normalised to FPKMs (internal function of irap)
+ - quantified and normalised by Cufflinks 2. 
+ 
+See thesis for more details.
+
+## Castle et al.
+
+Castle et al. [Digital genome-wide ncRNA expression, including SnoRNAs, across 11 human tissues using polyA-neutral amplification](http://dx.doi.org/10.1371/journal.pone.0011779)
+**Plos one**, 26 Jul _2010_, 5(7):e11779.
+
+ArrayExpress id: [E-MTAB-305](https://www.ebi.ac.uk/arrayexpress/experiments/E-MTAB-305/)
+
+This dataset has been produced with a single-end whole-RNA protocol. (It is the only one.)
+
+The tissues found in Castle et al. data are: Adipose, Colon, Heart, Hypothalamus, Kidney, Liver, Lung, Ovary,
+Skeletal muscle, Spleen and Testis.
+
+
+```{r Castle}
+custom_datatable("E-MTAB-305")
+```
+
+## Brawand et al.
+
+Brawand et al. [The evolution of gene expression levels in mammalian organs](http://europepmc.org/abstract/MED/22012392)
+ **Nature**, 19 Oct _2011_, 478(7369):343-348.
+
+ArrayExpress id: [E-GEOD-30352](https://www.ebi.ac.uk/arrayexpress/experiments/E-GEOD-30352/)
+
+This dataset has been produced with a single-end polyA-selected protocol.
+
+The tissues found in Brawand et al. are:  Frontal cortex, Prefrontal cortex, Temporal lobe, Cerebellum, Heart,            
+Kidney, Liver and Testis.           
+
+```{r Brawand}
+custom_datatable("E-GEOD-30352")
+```
+
+## Illumina Body Map 2.0
+
+ArrayExpress id: [E-MTAB-513](https://www.ebi.ac.uk/arrayexpress/experiments/E-MTAB-513/)
+
+This dataset has been produced with a single-end polyA-selected and a paired-end polyA-selected protocol.
+The thesis includes only the paired-end data.
+
+The tissues found in IBM 2.0 are: Adipose, Adrenal gland, Brain, Breast, Colon, Heart, Kidney, Leukocyte, Liver, Lung, 
+Lymph node, Ovary, Prostate, Skeletal muscle, Testis and Thyroid.      
+
+```{r IBM}
+custom_datatable("E-MTAB-513")
+```
+
+
+## Uhlén et al.
+
+Uhlén et al. [Tissue-based map of the human proteome](https://science.sciencemag.org/content/347/6220/1260419)
+**Science**, 23 Jan _2015_, 347(6220):1260419.
+
+ArrayExpress id: [E-MTAB-2836](https://www.ebi.ac.uk/arrayexpress/experiments/E-MTAB-2836/)
+
+This dataset has been produced with a paired-end polyA-selected protocol.
+
+The tissues found in Uhlén et al. are: Adipose, Adrenal gland, Appendix, Bone marrow, Cerebral cortex, Colon, Duodenum, Endometrium, OEsophagus, Fallopian tube, Gallbladder, Heart, Kidney, Liver, Lung, Lymph node, Ovary, Pancreas, Placenta, Prostate, Rectum, Salivary gland, Skeletal muscle, Skin, Small intestine, Smooth muscle, Spleen, Stomach, Testis, Thyroid, Tonsil and Urinary bladder.      
+
+### Annotation {.tabset .tabset-pills}
+
+#### Pooled by technical replicates
+
+```{r uhlenPooled}
+custom_datatable("E-MTAB-2836_pooled_tech")
+```
+
+#### Initial samples
+```{r uhlen}
+custom_datatable("E-MTAB-2836")
+```
+
+
+## GTEx
+
+To avoid any privacy issue, no information on separate samples for the GTEx dataset is provided here.
+Please refer to [dbGaP Study Accession: phs000424.v4.p1](https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs000424.v4.p1)
+
+Melé et al. [Human genomics. The human transcriptome across tissues and individuals.](https://science.sciencemag.org/content/348/6235/660.long) **Science**, 8 May _2015_, 348(6235):660-5.
+
+This dataset has been produced with a paired-end polyA-selected protocol.
+
+The tissues found in GTEx (v4) are: 
+
+## Additional files {.tabset .tabset-pills}
+
+### irap configuration files 
+[Additional configuration](chapter2/irap-configuration-files) files were used with [irap](https://github.com/nunofonseca/irap/releases/tag/v1.0.6b)
+for the transcriptomic RNA-seq studies (except for GTEx).
+
+
+### Preprocessing steps
+
+Most tools only accept fastq files as an input. 
+Older datasets (e.g. Castle et al.) need then to be converted to [Phred+33](https://en.wikipedia.org/wiki/FASTQ_format#Encoding). 
+
+All files were downloaded and then uncompressed and preprocessed with:
+
+```
+gunzip -d * fq_all2std.pl scarf2std >>outfile dirty2.pl >>outfile
+
+bsub ../fq_all2std.pl scarf2std 2010-06-22.mloewer.RNA.adipose.scarf >>adipose.txt
+```
+
+See [perl scripts](chapter2/perl-scripts).
+
+
+# Proteomic MS datasets
+
+The proteomic data have been pooled directly by tissue at the quantification step.
+
+Pandey et Kuster data have also been quantified with the PPKM methods for a subset of their tissues.
+
+## Pandey Lab data {.tabset .tabset-pills}
+This dataset was released with Kim et al. [A draft map of the human proteome](https://www.nature.com/articles/nature13302) **Nature**, 28 May _2014_, 509(7502):575–81
+and the initial files can be retrieved in [Pride id: PXD000561](https://www.ebi.ac.uk/pride/archive/projects/PXD000561).
+
+The following tissues and cell types are found in the Pandey lab dataset:
+
+### TOP3 quantification (PSMs)
+
+This quantification for the Pandey Lab data is also presenteed in [EBI expression atlas id: E-PROT-1](https://www.ebi.ac.uk/gxa/experiments/E-PROT-1/Results).
+
+(Nb samples: 30)
+
+- Adult: Adrenal gland, B cells, CD4 T cells, CD8 T cells, Colon, Oesophagus, Frontal cortex, Gallbladder, Heart, Kidney, Liver, Lung, Monocytes,  NK cells, Ovary, Pancreas, Platelets, Prostate, Rectum, Retina, Spinal cord, Testis and Urinary bladder
+
+- Fetal: Placenta, Brain, Gut, Heart, Liver, Ovary, Placenta, Testis.
+
+### PPKM quantification
+(Nb samples: 15)
+
+Adrenal gland, Colon, Oesophagus, Gallbladder, Heart, Kidney, Liver, Lung, Ovary, Pancreas, Placenta, Prostate, Rectum, Testis, Urinarybladder
+
+## Kuster Lab data {.tabset .tabset-pills}
+This dataset was released with 
+Wilhelm et al. [Mass-spectrometry-based draft of the human proteome](https://www.nature.com/articles/nature13319) **Nature**, 29 May _2014_, 509(7502):582-7
+and the initial files can be retrieved in [Pride id:PXD000865](https://www.ebi.ac.uk/pride/archive/projects/PXD000865) (entitled as 'human body map').
+
+The following tissues and fluids are found in the Kuster lab dataset:
+
+### TOP3 quantification (PSMs)
+(Nb samples: 36)
+
+Adrenal gland, Anus,  Ascites, Cardia (Heart), Cerebral cortex, 
+Cervix uteri, Colon, Earwax, Oesophagus, Gallbladder, 
+Hair follicle, Kidney, Liver, Lung, Lymph node, 
+Milk, Nasopharynx, Oral cavity, Ovary, Pancreas, 
+Placenta, Prostate, Rectum, Saliva, Salivary gland, 
+Seminal vesicle, Skin, Spleen, Stomach, Testis, 
+Thyroid, Tonsil, Tube, Uterus premenopause, Uterus post-menopause and Vulva.
+
+### PPKM quantification
+(Nb samples: 24)
+
+Adrenal gland,  Cerebral cortex, Cervix, Colon, Oesophagus, Gallbladder, Heart, Kidney,
+Liver, Lung, Lymph node, Ovary, Pancreas, Placenta, Prostate, Rectum, Salivary gland, Skin, Spleen,
+Stomach, Testis, Thyroid, Tonsil, Uterus
+
+## Cutler Lab data
+
+The files could be initially retrieved from [Proteomicsdb id:PRDB000012](https://www.proteomicsdb.org/#projects/12) or
+[Pride id:PXD002967](https://www.ebi.ac.uk/pride/archive/projects/PXD002967).
+
+(Nb samples: 10)
+
+The following samples are found in the Cutler lab dataset:
+
+Adipose, Cerebro spinal fluid (CSF), Bone, Breast, Heart, Lung, Ovary, Pancreas, Platelets secreted and Platelets lysate. 
+
+
+
+
+
+
+
