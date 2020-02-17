@@ -9,3 +9,5 @@ _site
 _site/*
 .prev/*
 *.nb.html
+thesis.pdf
+playground/*
