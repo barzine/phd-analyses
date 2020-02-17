@@ -3,12 +3,14 @@ Analyses performed for:
 # _Investigating Normal Human Gene Expression in Tissues with High-throughput Transcriptomic and Proteomic Data._ 
 _____
 
-Status of this repository: [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 All the analyses for the thesis have been performed, but many still need to be ported to this repository.
 
 The complete thesis latex code can be found at: [https://github.com/barzine/thesis](https://github.com/barzine/thesis).
 
 The R functions can be found as a separate R package: [https://github.com/barzine/barzinePhdR](https://github.com/barzine/barzinePhdR) ![Build Status](https://travis-ci.com/barzine/barzinePhdR.svg?branch=master)[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/barzine/barzinePhdR?branch=master&svg=true)](https://ci.appveyor.com/project/barzine/barzinePhdR)
+
+This site can been seen live at [barzine.net/~mitra/thesis/](http://www.barzine.net/~mitra/thesis)
 
 ______
 
