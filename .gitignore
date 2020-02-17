@@ -1,0 +1,11 @@
+.phd-analyses.Rproj
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+previous
+previous/*
+_site
+_site/*
+.prev/*
+*.nb.html
