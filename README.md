@@ -10,7 +10,7 @@ The complete thesis xelatex code can be found at: [https://github.com/barzine/th
 
 The R functions can be found as a separate R package: [https://github.com/barzine/barzinePhdR](https://github.com/barzine/barzinePhdR) ![Build Status](https://travis-ci.com/barzine/barzinePhdR.svg?branch=master)[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/barzine/barzinePhdR?branch=master&svg=true)](https://ci.appveyor.com/project/barzine/barzinePhdR)
 
-This site can been seen live at [EMBL-EBI website](https://www.ebi.ac.uk/~mitra/thesis) or at [barzine.net/~mitra/thesis/](http://www.barzine.net/~mitra/thesis)
+This site can been seen live at [EMBL-EBI website](https://www.ebi.ac.uk/~mitra/thesis) or at [barzine.net/~mitra/thesis/](barzine.net/~mitra/thesis)
 
 Many of the analyses can be run "out-of-the-box", this repository has not be created to be use by anyone else but myself.
 As such, there are a number of prerequisites that could be avoided if one gets into the code and tweak away.
