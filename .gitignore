@@ -11,3 +11,7 @@ _site/*
 *.nb.html
 thesis.pdf
 playground/*
+*.html
+**/.Rhistory
+**/*png
+**/index.html

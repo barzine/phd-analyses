@@ -11,9 +11,9 @@ output:
     number_sections: true
     theme: united
     highlight: pygments
-    css: styles.css
+    css: ../styles.css
     includes:
-      after_body: footer.html
+      after_body: ../footer.html
 
 ---
 

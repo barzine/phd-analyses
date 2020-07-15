@@ -1,0 +1,122 @@
+---
+title: 'Supplementaries for Chapter 4'
+author: "Mitra Barzine"
+date: "2020"
+output:
+  html_document:
+    code_folding: hide
+    theme: united
+    highlight: pygments
+    smart: true
+    css: ../styles.css
+    includes:
+      after_body: ../footer.html
+---
+
+```{r setupchild, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+<small> For the report: `r mainPageName` </small>
+
+Summary of applied parameters
+
+<table>
+<tbody>
+<tr>
+<td>
+* Ensembl version: `r ENSEMBL_VER`
+* Analysis conducted at `r analysis_level`
+* Quantification method: `r quantMethod`
+* Normalisation method: `r toupper(normMethod)`
+* 
+```{r summaryProtGenechild, echo=FALSE, results='asis'}  
+if(proteinCodingOnly){
+  cat("Only 'protein coding' biotype kept")
+}else{
+  cat("All types of biotypes are kept")
+}
+```
+</td>
+<td>
+*
+```{r summaryMitochChild,echo=FALSE, results='asis'}  
+if(removeMitoch){
+  cat("Mitochondria are REMOVED")
+}else{
+  cat("Mitochondria are kept")
+}
+```
+* Correlation method in use: `r simpleCap(corrMethod)`
+* Log2-scalling applied to the data: `r log2scaling`
+* 
+```{r summaryCutoffChild, echo=FALSE, results='asis'}  
+if(cutoff==0){
+  cat(paste("Analyses include genes observed above 0",toupper(normMethod)))
+}else{
+  if(cutoff>0){
+    cat(paste("Analyses include genes observed at least at",cutoff,toupper(normMethod)))
+  }else{
+    cat(paste("Invalid cutoff of expression"))
+    flag4rChunks<-FALSE
+  }
+}
+```
+</td>
+</tr>
+</tbody>
+</table>
+
+
+
+# `r label`
+
+```{r whichCase}
+basicCase=enhancedCase=captionFilterCase=captionFilterColNameCase=FALSE
+if(theChoice=="basic") basicCase=TRUE
+if(theChoice=="enhanced") enhancedCase=TRUE
+if(theChoice=="captionFilter") captionFilterCase=TRUE
+if(theChoice=="captionFilterColName") captionFilterColNameCase=TRUE
+
+```
+
+```{r printChildObjectBasic, results='asis',eval=basicCase,warning=FALSE}
+DT::datatable(data = object)
+```
+
+```{r printChildObjectEnhanced, results='asis',eval=enhancedCase,warning=FALSE}
+DT::datatable(data = object,
+              extensions = c('Responsive','Buttons','ColReorder'),
+              options = list(pageLength = pageLength,
+                             dom='Blfrtip',
+                             buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print'),
+                             colReorder = list(realtime = FALSE)))
+```
+
+```{r printChildObjectCaptionFilter,results='asis',eval=captionFilterCase,warning=FALSE}
+cat(theCaption)
+DT::datatable(data=object,
+              filter = 'top',
+              caption=theCaption,
+              extensions = c('Responsive','Buttons','ColReorder'),
+              options = list(pageLength = pageLength,
+                             dom='Blfrtip',
+                             buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print'),
+                             colReorder = list(realtime = FALSE)))
+```
+
+```{r printChildObjectCaptionFilterColName,results='asis',eval=captionFilterColNameCase,warning=FALSE}
+cat(theCaption)
+DT::datatable(data=object,
+              filter = 'top',
+              caption=theCaption,
+              colnames = colnamesLabels,
+              extensions = c('Responsive','Buttons','ColReorder'),
+              options = list(pageLength = pageLength,
+                             dom='Blfrtip',
+                             buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print'),
+                             colReorder = list(realtime = FALSE)))
+```
+
+
+

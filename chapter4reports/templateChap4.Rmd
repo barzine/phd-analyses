@@ -1,0 +1,1158 @@
+---
+author: "Mitra Barzine"
+date: "2020"
+output: 
+  html_document:
+    self_contained: false
+    lib_dir: libs
+    code_download: true
+    theme: united
+    highlight: pygments
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+    df_print: paged
+    css: ../styles.css
+    includes:
+      after_body: ../footer.html
+---
+---
+title: `r dynTitle`
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(error=TRUE)
+suppressPackageStartupMessages(library(barzinePhdR))
+flag4rChunks<-TRUE
+flag4rChunks5D<-TRUE
+flag4rChunks2D<-TRUE
+if(compDF=="2DF") flag4rChunks5D<-FALSE
+if(compDF=="5DF") flag4rChunks2D<-FALSE
+op <- par(family = "Linux Libertine")
+```
+
+Notes:
+
+* The analyses are built with [`barzinePhdR`](https://github.com/barzine/barzinePhdR), [`barzinePhdData`](https://github.com/barzine/barzinePhdData) packages and the additional packages: [`DT`](https://rstudio.github.io/DT/) and [`pander`](https://cran.r-project.org/web/packages/pander/index.html).  
+* This report has been generated with the help of [`invocation.R`](invocation.R) and templates.
+
+```{r otherFunctions}
+pageLength=15
+pDF<-function(x,pageLength=15){
+  DT::datatable( signif(x ,2) ,
+                extensions = c('Responsive','Buttons','ColReorder'),
+                options = list(pageLength = pageLength,
+                               dom='Blfrtip',
+                               buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print'),
+                               colReorder = list(realtime = FALSE)))
+}
+toNewPage<-function(mainPageName=NameReport,object,label,pageName, theChoice="basic"){
+  if(newDir){
+     rmarkdown::render("toNewPage.Rmd",output_file=paste0(mainPageName,pageName),output_dir=NameReport, quiet = TRUE)
+     return(paste0("[",label,"](",paste0(NameReport,"/",mainPageName,pageName),".html)"))
+  }else{
+     rmarkdown::render("toNewPage.Rmd",output_file=paste0(mainPageName,pageName), quiet = TRUE)
+    return(paste0("[",label,"](",paste0(mainPageName,pageName),".html)"))
+  }
+}
+
+printLink<-''
+```
+
+# Summary of applied parameters
+
+<table>
+<tbody>
+<tr>
+<td>
+* Ensembl version: `r ENSEMBL_VER`
+* Analysis conducted at `r analysis_level`
+* Quantification method: `r quantMethod`
+* Normalisation method: `r toupper(normMethod)`
+* 
+```{r summaryProtGene, echo=FALSE, results='asis'}  
+if(proteinCodingOnly){
+  cat("Only 'protein coding' biotype kept")
+}else{
+  cat("All types of biotypes are kept")
+}
+```
+</td>
+<td>
+*
+```{r summaryMitoch,echo=FALSE, results='asis'}  
+if(removeMitoch){
+  cat("Mitochondria are REMOVED")
+}else{
+  cat("Mitochondria are kept")
+}
+```
+* Correlation method in use: `r simpleCap(corrMethod)`
+* Log2-scalling applied to the data: `r log2scaling`
+* 
+```{r summaryCutoff, echo=FALSE, results='asis'}  
+if(cutoff==0){
+  cat(paste("Analyses include genes observed above 0",toupper(normMethod)))
+}else{
+  if(cutoff>0){
+    cat(paste("Analyses include genes observed at least at",cutoff,toupper(normMethod)))
+  }else{
+    cat(paste("Invalid cutoff of expression"))
+    flag4rChunks<-FALSE
+  }
+}
+```
+</td>
+</tr>
+</tbody>
+</table>
+
+```{r initialise, error=FALSE,results="asis"}
+if(compDF=="5DF"){
+  if(!quantMethod=='htseq'){
+    cat(paste("<h2>The quantification by",simpleCap(quantMethod),"is not provided for all the datasets to be included in the analyses.</h2>"))
+    flag4rChunks<-FALSE
+  }
+  
+  if(!normMethod %in% c('fpkm','tpm')){
+    cat(paste("<h2>The normalisation method",simpleCap(normMethod),"is not available for all the datasets to be included in the analyses.</h2>"))
+    flag4rChunks<-FALSE
+  }
+  
+}
+```
+
+```{r noData2analyse,echo=!flag4rChunks,eval=!flag4rChunks,results='asis'}
+cat("<h3 style='color: red; font-weight: bold;'>No result can be computed for the current combination of parameters.</h3>")
+```
+
+```{r loadData, echo=flag4rChunks,eval=flag4rChunks,results='asis'}
+DF1<-loadDF(labelDF1)
+DF2<-loadDF(labelDF2)
+
+if(compDF=="5DF"){
+  DF3<-loadDF(labelDF3)
+  DF4<-loadDF(labelDF4)
+  DF5<-loadDF(labelDF5)
+}
+```
+
+# Common tissues
+```{r commonTissue, echo=flag4rChunks,eval=flag4rChunks,results='asis'}
+commonT<-Intersect(colnames(DF1),colnames(DF2))
+
+if(compDF=="5DF"){
+   commonT<-Intersect(commonT,colnames(DF3),colnames(DF4),colnames(DF5))
+}
+cat(paste('There are',length(commonT), 'common tissues between the datasets:'),commonT)
+```
+
+```{r filteringAndSelection,echo=flag4rChunks,eval=flag4rChunks,results='asis'}
+DF1<-strip(DF1[,commonT])
+DF2<-strip(DF2[,commonT])
+if(compDF=="5DF"){
+  DF3<-strip(DF3[,commonT])
+  DF4<-strip(DF4[,commonT])
+  DF5<-strip(DF5[,commonT])
+}
+
+if(proteinCodingOnly){
+  DF1<-filtre.dataset(DF1,protein.coding)
+  DF2<-filtre.dataset(DF2,protein.coding)
+  if(compDF=="5DF"){
+    DF3<-filtre.dataset(DF3,protein.coding)
+    DF4<-filtre.dataset(DF4,protein.coding)
+    DF5<-filtre.dataset(DF5,protein.coding)
+  }
+}
+
+if(cutoff==0){
+  DF1<-strip(DF1,'gt',0)
+  DF2<-strip(DF2,'gt',0)
+  if(compDF=="5DF"){
+    DF3<-strip(DF3,'gt',0)
+    DF4<-strip(DF4,'gt',0)
+    DF5<-strip(DF5,'gt',0)
+  }
+}else{
+  DF1<-strip(DF1,'ge',cutoff)
+  DF2<-strip(DF2,'ge',cutoff)
+  if(compDF=="5DF"){
+    DF3<-strip(DF3,'ge',cutoff)
+    DF4<-strip(DF4,'ge',cutoff)
+    DF5<-strip(DF5,'ge',cutoff)
+  }
+}
+
+if(removeMitoch){
+  DF1<-excludeGenes(DF1,mitoch)
+  DF2<-excludeGenes(DF2,mitoch)
+  if(compDF=="5DF"){
+    DF3<-excludeGenes(DF3,mitoch)
+    DF4<-excludeGenes(DF4,mitoch)
+    DF5<-excludeGenes(DF5,mitoch)
+  }
+}
+
+if(log2scaling){
+  DF1<-log2(DF1+pseudocount)
+  DF2<-log2(DF2+pseudocount)
+  if(compDF=="5DF"){
+  DF3<-log2(DF3+pseudocount)
+  DF4<-log2(DF4+pseudocount)
+  DF5<-log2(DF5+pseudocount)
+  }
+}
+
+```
+
+```{r commonGenesHeaders,results='asis', echo=FALSE,eval=flag4rChunks}
+cat("# Common genes")
+```
+
+```{r commonGenes, echo=flag4rChunks,eval=flag4rChunks, fig.width=4,fig.height=4, fig.align='center'}
+commonG<-Intersect(rownames(DF1),rownames(DF2))
+
+if(compDF=="5DF"){
+DrawVenn(fontfamily='Linux Libertine',
+         cat.fontfamily='Linux Libertine',
+         a=DF1,b=DF2,c=DF3,
+         d=DF4,e=DF5,
+         names=nameDFs,
+         cols=datasetCol[nameDFs],
+         type='rownames',
+         cat.cex=rep(1.5,5),
+         cat.pos=c(0,10,250,100,0),euler.d=FALSE,
+         #cex=c(rep(1.6,14),rep(2.1,2),1.6,2.1,rep(1.6,8),2.1,rep(1.6,3),2.1),
+         fontface=c(rep('plain',14),rep('bold',2),'plain','bold',rep('plain',8),'bold',rep('plain',3),'bold'))
+  
+  commonG<-Intersect(commonG,rownames(DF3),rownames(DF4),rownames(DF5))
+  DF3<-DF3[commonG,]
+  DF4<-DF4[commonG,]
+  DF5<-DF5[commonG,]
+}else{
+  if(compDF=="2DF"){
+    DrawVenn(fontfamily='Linux Libertine',
+         cat.fontfamily='Linux Libertine',
+         a=DF1,b=DF2,
+         names=nameDFs,
+         cols=datasetCol[nameDFs],
+         type='rownames')
+  }
+}
+DF1<-DF1[commonG,]
+DF2<-DF2[commonG,]
+
+
+combinedData<-cbind(suffix(DF1,paste0("(",nameDFs[1],")"),sep=' '),
+                    suffix(DF2,paste0("(",nameDFs[2],")"),sep=' '))
+if(compDF=="5DF"){
+  combinedData<-cbind(combinedData,
+                      suffix(DF3,paste0("(",nameDFs[3],")"),sep=' '),
+                      suffix(DF4,paste0("(",nameDFs[4],")"),sep=' '),
+                      suffix(DF5,paste0("(",nameDFs[5],")"),sep=' '))
+}
+```
+
+```{r theData, echo=flag4rChunks,eval=flag4rChunks,warning=FALSE,message=FALSE}
+theCaption=paste("Expression of the common genes for the common tissues across",nameDFs[1],", ",nameDFs[2],", ",
+                    nameDFs[3],", ",nameDFs[4], "and",nameDFs[5])
+ExpressionLink<-toNewPage(object=signif(combinedData,2),
+                          label=paste0("Table of expression of the common genes for the common tissues across ",
+                                nameDFs[1],", ",nameDFs[2],", ", nameDFs[4],", ",nameDFs[3] ," and ",nameDFs[5]),
+                          pageName="expressionData",
+                          theChoice="captionFilter")
+
+printLink<-ExpressionLink
+```
+
+` r printLink`
+
+
+```{r tissueHeatmapHeaders, results='asis', echo=FALSE,eval=flag4rChunks}
+cat("# Comparison of the tissues' interstudy correlation to intrastudy correlation\n")
+cat("## Correlation {.tabset}\n")
+cat("### Heatmap\n")
+```
+
+```{r tissueHeatmap, echo=flag4rChunks,eval=flag4rChunks,fig.height=8, fig.width=10, fig.align='center'}
+mHeatmap(combinedData, method=corrMethod, 
+         common.cond = commonT,
+         RowsideMode ='extractSpace2',ColsideMode = 'match',
+         TissueCol=TissueCol, datasetCol=datasetCol,
+         keysize=0.8,
+         key.title=paste(simpleCap(corrMethod),'correlation'))
+```
+
+```{r tissueHeatmapHeaders4table, results='asis', echo=FALSE,eval=flag4rChunks}
+cat("### Table")
+```
+
+```{r tissueHeatmapTable, echo=FALSE,eval=flag4rChunks}
+pDF(cor(combinedData,method=corrMethod))
+```
+
+```{r tissueTestHeaders, results='asis', echo=FALSE,eval=flag4rChunks}
+cat("## Welch test for identical tissues versus different tissues")
+```
+
+```{r tissueTest, results='asis', echo=flag4rChunks,eval=flag4rChunks}
+CorrMat<-cor(combinedData,method=corrMethod)
+
+DFtest  <- test_CorrMat_identical_different(CorrMat,out='DFtest',sep=' ', reorder=FALSE)
+Identical <- DFtest[DFtest$Type=="Same tissues",]
+Different <- DFtest[DFtest$Type=="Different tissues",]
+theTest <- t.test(Identical$Correlation,Different$Correlation)
+
+pander::pander(theTest)
+```
+
+```{r tissueTestPlot, results='asis', echo=flag4rChunks,eval=flag4rChunks,fig.align='center', fig.width=5,fig.height=4}
+p <- ggplot(DFtest,aes(Type,Correlation)) + geom_boxplot()+coord_cartesian(ylim=c(0,1))
+p <- p + ylab(paste(simpleCap(corrMethod),"correlation"))
+p <- p + theme_minimaliste(base_family ='Linux Libertine')+theme(axis.text=element_text(size=10),axis.title=element_text(size=11))
+plot(p)
+```
+
+```{r TSgenesHeaders, results='asis', echo=FALSE,eval=flag4rChunks}
+cat("# Tissue specific (TS) genes")
+```
+
+
+```{r TSgenesTigerHeaders, results='asis', echo=FALSE,eval=flag4rChunks5D}
+cat("## TS genes from Tiger\n\n")
+
+cat("[TiGER](http://bioinfo.wilmer.jhu.edu/tiger/) {X. Liu et al., 2008}[^1] reports TS genes for thirty independent tissues (based on ESTs experiments). \n")
+
+cat("See the preparation and conversion [script](tigerExtraction.html) for the selected ids used in the analyses.\n")
+
+cat("[^1]: Liu, X., X. Yu, D. J. Zack, H. Zhu, and J. Qian (2008). ‘TiGER: a database for tissue-specific gene expression and regulation’. BMC Bioinformatics 9, p. 271")
+
+```
+
+
+```{r TSgenesTiger, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D}
+filterTigerT4<-combinedData[rownames(combinedData) %in% TigerTSselect$ensembl_id,]
+filterTigerT4<-TigerTSselect[TigerTSselect$ensembl_id %in% rownames(filterTigerT4),]
+
+colHeatmap=colorRampPalette(c('aliceblue','darkcyan'))
+
+heatmap.2(t(log2(as.matrix(combinedData[filterTigerT4$ensembl_id,])+1)),
+          scale="none",
+          key=T,keysize=1.5, density.info="none", trace="none",key.title = NA,
+          labCol = NA,
+          margins = c(1,8),
+          col=colorRampPalette(c('aliceblue','darkcyan')),
+          dendrogram = 'row',key.xlab = 'log2(FPKM+1)',
+          ColSideColors = TissueCol[sapply(as.character(filterTigerT4$tissue),function(x) simpleCap(x))],
+          Colv = FALSE,
+          add.expr=text(
+            #x=c(1,129,318,490,923), #aligned left
+            x=c(41,194,380,678,923), #kinda centered
+            y=c(22,22,22,22,21.2), xpd=NA, adj=0, labels = c('Heart','Kidney','Liver','Testis', '(TiGER annotation)'))
+          )
+
+heatmap.2(t(log2(as.matrix(combinedData[filterTigerT4$ensembl_id,])+1)),
+          scale="none",
+          key=T,keysize=1.5, density.info="none", trace="none",key.title = NA,
+          labCol = NA,
+          margins = c(1,8),
+          col=colorRampPalette(c('aliceblue','darkcyan')),
+          dendrogram = 'row',key.xlab = 'log2(FPKM+1)',
+          ColSideColors = TissueCol[sapply(as.character(filterTigerT4$tissue),function(x) simpleCap(x))],
+          Colv = FALSE,
+          add.expr=text(
+            #x=c(1,129,318,490,923), #aligned left
+            x=c(41,194,380,678,923), #kinda centered
+            y=c(22,22,22,22,21.2), xpd=NA, adj=0, 
+            labels = c('Heart','Kidney','Liver','Testis', '(TiGER annotation)'))
+          )
+```
+
+```{r TSgenesFCHeaders, results='asis', echo=FALSE,eval=flag4rChunks}
+cat("## TS genes selected with Fold Change ratio method\n\n")
+```
+
+Fold change (FC) ratio: $FCm_{g,t,d}=\frac{x_{g,t,d}}{\frac{1}{n}\sum\limits_{i=1}^n {x_{g,i,d}}}$
+
+
+```{r TSgenesFCDF1, results='asis', echo=flag4rChunks, eval=flag4rChunks, warning=FALSE}
+cat(paste("###", nameDFs[1],"\n"))
+DF1.spe<-ratioSpe(DF1)
+theCaption=paste0(nameDFs[1],': specificity of the genes for each tissue')
+
+DF1speLink<-toNewPage(object=cbind(DF1.spe,'Name'=gene.mapID[rownames(DF1.spe)]),
+                      label=paste("Table of the tissue specificity (FC) for the genes of",nameDFs[1]),
+                      pageName=paste0(labelDF1,"_fc_spe"),
+                      theChoice="captionFilter")
+
+printLink<-paste(DF1speLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesFCDF2, results='asis', echo=flag4rChunks, eval=flag4rChunks, warning=FALSE}
+cat(paste("###", nameDFs[2],"\n"))
+DF2.spe<-ratioSpe(DF2)
+theCaption=paste0(nameDFs[2],': specificity of the genes for each tissue')
+DF2speLink<-toNewPage(object=cbind(DF2.spe,'Name'=gene.mapID[rownames(DF2.spe)]),
+                      label=paste("Table of the tissue specificity (FC) for the genes of",nameDFs[2]),
+                      pageName=paste0(labelDF2,"_fc_spe"),
+                      theChoice="captionFilter")
+
+
+printLink<-paste(DF2speLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesFCcleanUp, echo=FALSE, eval=flag4rChunks2D, warning=FALSE}
+printLink<-""
+```
+
+```{r TSgenesFCDF3, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D,warning=FALSE}
+cat(paste("\n###", nameDFs[3],"\n"))
+DF3.spe<-ratioSpe(DF3)
+theCaption=paste0(nameDFs[3],': specificity of the genes for each tissue')
+DF3speLink<-toNewPage(object=cbind(DF3.spe,'Name'=gene.mapID[rownames(DF3.spe)]),
+                      label=paste("Table of the tissue specificity (FC) for the genes of",nameDFs[3]),
+                      pageName=paste0(labelDF3,"_fc_spe"),
+                      theChoice="captionFilter")
+
+printLink<-paste(DF3speLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesFCDF4, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D,warning=FALSE}
+cat(paste("\n###", nameDFs[4],"\n"))
+DF4.spe<-ratioSpe(DF4)
+theCaption=paste0(nameDFs[4],': specificity of the genes for each tissue')
+DF4speLink<-toNewPage(object=cbind(DF4.spe,'Name'=gene.mapID[rownames(DF4.spe)]),
+                      label=paste("Table of the tissue specificity (FC) for the genes of",nameDFs[4]),
+                      pageName=paste0(labelDF4,"_fc_spe"),
+                      theChoice="captionFilter")
+printLink<-paste(DF4speLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesFCDF5, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D,warning=FALSE}
+cat(paste("\n###", nameDFs[5],"\n"))
+DF5.spe<-ratioSpe(DF5)
+theCaption=paste0(nameDFs[5],': specificity of the genes for each tissue')
+DF5speLink<-toNewPage(object=cbind(DF5.spe,'Name'=gene.mapID[rownames(DF5.spe)]),
+                      label=paste("Table of the tissue specificity (FC) for the genes of",nameDFs[5]),
+                      pageName=paste0(labelDF5,"_fc_spe"),
+                      theChoice="captionFilter")
+
+printLink<-paste(DF5speLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesFCprepplot5D, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D}
+listDF<-lapply(setNames(commonT,commonT),function(x){
+               resDF<-overlapSortCumul5DF(setNames(DF1.spe[,x],rownames(DF1.spe)),
+                          setNames(DF2.spe[,x],rownames(DF2.spe)),
+                          setNames(DF3.spe[,x],rownames(DF3.spe)),
+                          setNames(DF4.spe[,x],rownames(DF4.spe)),
+                          setNames(DF5.spe[,x],rownames(DF5.spe)))
+               return(resDF)
+})
+```
+
+```{r TSgenesFCprepplot2D, results='asis', echo=flag4rChunks2D,eval=flag4rChunks2D}
+listDF<-lapply(setNames(commonT,commonT),function(x){
+               resDF<-overlapSortCumul2DF(setNames(DF1.spe[,x],rownames(DF1.spe)),
+                                          setNames(DF2.spe[,x],rownames(DF2.spe)))
+               return(resDF)
+})
+```
+
+
+```{r TSgenesFCplot, results='asis', echo=flag4rChunks,eval=flag4rChunks}
+resDFforPlot<-Reduce(data.frame,lapply(commonT,function(x){
+  return(listDF[[x]]$overlap)
+}))
+colnames(resDFforPlot)<-commonT
+
+resDFforPlot$seq<-listDF[[1]]$seq
+resDFforPlot<-reshape2::melt(resDFforPlot,id.vars="seq")
+colnames(resDFforPlot)<-c('seq','Tissue','Overlap')
+resDFforPlot$Tissue<-factor(resDFforPlot$Tissue,levels=c(commonT,'Randomised'))
+
+plotSpeOverlap<-ggplot(resDFforPlot,aes(seq,Overlap))+geom_point(aes(color=Tissue),size=1.5)
+plotSpeOverlap<-plotSpeOverlap+xlab('Number of ranked genes\n(by decreasing order of their specificity to each tissue)')
+plotSpeOverlap<-plotSpeOverlap+ylab('Proportion of common genes\nacross all datasets')
+plotSpeOverlap<-plotSpeOverlap + theme_minimaliste(base_family ='Linux Libertine')+ggthemes::geom_rangeframe()
+plotSpeOverlap<-plotSpeOverlap+scale_colour_manual(values=c(TissueCol,setNames("grey65","Randomised")))+guides(fill=guide_legend(ncol=2))+theme(legend.position='bottom')
+plotSpeOverlap
+```
+
+Note: the randomised data have been skipped here so the generation of the report can be quickened. 
+
+
+```{r TSgenesHampelHeaders, results='asis', echo=FALSE,eval=flag4rChunks}
+cat("## TS genes selected with Hampel's method (detection of atypical expression)\n\n")
+
+cat("The Hampel method allows detecting outliers and it relies on the median and the MAD (median absolute deviation) as robust estimate of the location and spread (instead of the more commonly used mean and standard deviation). [[Hampel, 1971](https://www.jstor.org/stable/2240114); [Hampel, 1974](https://www.tandfonline.com/doi/abs/10.1080/01621459.1974.10482962)]\n")
+
+cat("The test is considered successfull when: `abs(DF[x,]-median(x))>5.2*m.a.d(x)`")
+```
+
+```{r TSgenesHampelDF1, results='asis', echo=flag4rChunks,eval=flag4rChunks, warning=FALSE}
+cat(paste("###", nameDFs[1],"\n"))
+DF1.hampel<-hampel.test(DF1)
+theCaption=paste0(nameDFs[1],": whether the genes have an atypical expression (Hampel's test) in a given tissue (ie tissue specific)")
+DF1HampelLink<-toNewPage(object=cbind(DF1.hampel,'Name'=gene.mapID[rownames(DF1.hampel)]),
+                      label=paste("Result table for the genes of",nameDFs[1],"tested with the Hampel's test"),
+                      pageName=paste0(labelDF1,"_hampel_spe"),
+                      theChoice="captionFilter")
+printLink<-paste(DF1HampelLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesHampelDF2, results='asis', echo=flag4rChunks,eval=flag4rChunks, warning=FALSE}
+cat(paste("###", nameDFs[2],"\n"))
+DF2.hampel<-hampel.test(DF2)
+theCaption=paste0(nameDFs[2],": whether the genes have an atypical expression (Hampel's test) in a given tissue (ie tissue specific)")
+DF2HampelLink<-toNewPage(object=cbind(DF2.hampel,'Name'=gene.mapID[rownames(DF2.hampel)]),
+                      label=paste("Result table for the genes of",nameDFs[2],"tested with the Hampel's test"),
+                      pageName=paste0(labelDF2,"_hampel_spe"),
+                      theChoice="captionFilter")
+
+printLink<-paste(DF2HampelLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesHampelcleanup, echo=FALSE, eval=flag4rChunks5D}
+printLink<-""
+```
+
+```{r TSgenesHampel2D, results='asis', echo=flag4rChunks2D, eval=flag4rChunks2D, message=FALSE, warning=FALSE}
+commonHampelTissuesList<-lapply(setNames(commonT,commonT), function(x){
+      return(Intersect(rownames(DF1.hampel)[DF1.hampel[,x]],
+                       rownames(DF2.hampel)[DF2.hampel[,x]]))
+})
+
+commonHampelTissues<-Reduce(rbind,lapply(commonT,function(x){
+  if(length(commonHampelTissuesList[[x]])>0){
+    return(data.frame(Tissue=x, geneID=commonHampelTissuesList[[x]],gene.mapID[commonHampelTissuesList[[x]]]))
+  }
+}))
+
+cat(paste("### Common TS genes (computed with Hampel's test between", nameDFs[1],'and',nameDFs[2],"\n"))
+theCaption=paste0("Common TS genes (computed with Hampel's test between", nameDFs[1],'and',nameDFs[2])
+CommonHampelLink<-toNewPage(object=commonHampelTissues,
+                      label=paste("Common TS genes (computed with Hampel's test between", nameDFs[1],'and',nameDFs[2]),
+                      pageName="common_hampel_spe",
+                      theChoice="captionFilter")
+
+printLink<-paste(CommonHampelLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesHampel5DFDF3, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D, warning=FALSE}
+cat(paste("###", nameDFs[3],"\n"))
+DF3.hampel<-hampel.test(DF3)
+theCaption=paste0(nameDFs[3],": whether the genes have an atypical expression (Hampel's test) in a given tissue (ie tissue specific)")
+DF3HampelLink<-toNewPage(object=cbind(DF3.hampel,'Name'=gene.mapID[rownames(DF3.hampel)]),
+                      label=paste("Result table for the genes",nameDFs[3],"tested with the Hampel's test"),
+                      pageName=paste0(labelDF3,"_hampel_spe"),
+                      theChoice="captionFilter")
+
+printLink<-paste(DF3HampelLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesHampel5DFDF4, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D, warning=FALSE}
+cat(paste("###", nameDFs[4],"\n"))
+DF4.hampel<-hampel.test(DF4)
+theCaption=paste0(nameDFs[4],": whether the genes have an atypical expression (Hampel's test) in a given tissue (ie tissue specific)")
+DF4HampelLink<-toNewPage(object=cbind(DF4.hampel,'Name'=gene.mapID[rownames(DF4.hampel)]),
+                      label=paste("Result table for the genes",nameDFs[4],"tested with the Hampel's test"),
+                      pageName=paste0(labelDF4,"_hampel_spe"),
+                      theChoice="captionFilter")
+
+printLink<-paste(DF4HampelLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesHampel5DFDF5, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D, warning=FALSE}
+cat(paste("###", nameDFs[5],"\n"))
+DF5.hampel<-hampel.test(DF5)
+theCaption=paste0(nameDFs[5],": whether the genes have an atypical expression (Hampel's test) in a given tissue (ie tissue specific)")
+DF5HampelLink<-toNewPage(object=cbind(DF5.hampel,'Name'=gene.mapID[rownames(DF5.hampel)]),
+                      label=paste("Result table for the genes",nameDFs[5],"tested with the Hampel's test"),
+                      pageName=paste0(labelDF5,"_hampel_spe"),
+                      theChoice="captionFilter")
+printLink<-paste(DF5HampelLink,"\n\n")
+```
+
+`r printLink`
+
+```{r TSgenesHampel5DF, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D, warning=FALSE}
+commonHampelTissuesList<-lapply(setNames(commonT,commonT), function(x){
+      return(Intersect(rownames(DF1.hampel)[DF1.hampel[,x]],
+                       rownames(DF2.hampel)[DF2.hampel[,x]],
+                       rownames(DF3.hampel)[DF3.hampel[,x]],
+                       rownames(DF4.hampel)[DF4.hampel[,x]],
+                       rownames(DF5.hampel)[DF5.hampel[,x]]))
+})
+
+commonHampelTissues<-Reduce(rbind,lapply(commonT,function(x){
+  if(length(commonHampelTissuesList[[x]])>0){
+    return(data.frame(Tissue=x, geneID=commonHampelTissuesList[[x]],gene.mapID[commonHampelTissuesList[[x]]]))
+  }
+}))
+
+cat(paste("### Common TS genes (computed with Hampel's test between", nameDFs[1],',',
+          nameDFs[2],',',nameDFs[3],',',nameDFs[4],'and',nameDFs[5],"\n"))
+theCaption=paste("Common TS genes (computed with Hampel's test between", nameDFs[1],',',
+          nameDFs[2],',',nameDFs[3],',',nameDFs[4],'and',nameDFs[5])
+CommonHampelLink<-toNewPage(object=commonHampelTissues,
+                      label=paste("Common TS genes (computed with Hampel's test between", nameDFs[1],',',
+          nameDFs[2],',',nameDFs[3],',',nameDFs[4],'and',nameDFs[5]),
+                      pageName="common_hampel_spe",
+                      theChoice="captionFilter")
+
+
+printLink<-paste(CommonHampelLink,"\n\n")
+```
+
+`r printLink`
+
+# Gene classification 
+
+Classification inspired by classification defined by Uhlén et al. [[Fagerberg et al., 2014](https://dx.doi.org/10.1074%2Fmcp.M113.035600); [Uhlén, Fagerberg, et al., 2015](https://science.sciencemag.org/content/347/6220/1260419) ; [Uhlén, Hallström, et al., 2016](https://dx.doi.org/10.15252%2Fmsb.20155865)]
+
+|Category             | Definition                                                                   |
+|:--------------------|:-----------------------------------------------------------------------------|
+|Not detected         | Never detected above 0 FPKM                                                  |
+|Not expressed        | Never detected above 1 FPKM                                                  |
+|Mixed high           | Expressed in a subset of tissues and always ≥ 10 FPKM                        |
+|Mixed Low            | Expressed in a subset of tissues and always < 10 FPKM                        |
+|Ubiquitous High      | Expressed in all the tissues and always ≥ 10 FPKM                            |
+|Ubiquitous Low       | Expressed in all the tissues and always < 10 FPKM                            |
+|Group enhanced       | Expressed in a subset of tissues with an expression ≥ 5*mean(all of tissues) |
+|Tissue enhanced      | Expressed in a single tissue with an expression ≥ 5*mean(all of tissues)     |
+|Tissue enriched      | Expressed in a single tissue with an expression ≥ 5*max(all of tissues)      |
+
+`FullAnnotationList` contains all the genes ID for the reference used to map the transcriptomic data: Ensembl 76.
+
+```{r geneCatprep, results='asis', echo=flag4rChunks,eval=flag4rChunks}
+catDetected<-FALSE
+catExpressed<-FALSE
+colnamesLabels = c('Gene name' = 'name','Ensembl id' = 'ensemblId')
+
+printLink<-""
+if(cutoff==0){
+  catDetected<-TRUE
+}
+
+if(cutoff %<=% 1){
+  catExpressed<-TRUE
+}
+FullAnnotationList<-Load("FullAnnotationList.RData")
+if(proteinCodingOnly) FullAnnotationList<-Intersect(FullAnnotationList,protein.coding)
+if(removeMitoch) FullAnnotationList<-setdiff(FullAnnotationList,mitoch)
+lowHighCut=10
+```
+
+
+```{r geneCat2Da, results='asis', echo=flag4rChunks2D,eval=flag4rChunks2D,warning=FALSE}
+if(catDetected){
+  cat("\n## Not detected\n")
+  DF1.notDetected<-setdiff(FullAnnotationList,rownames(DF1))
+  theCaption=paste("Not detected in", nameDFs[1])
+  DF1notDetectedLink<-toNewPage(object=data.frame(ensemblId=DF1.notDetected,name=gene.mapID[DF1.notDetected]),
+                      label=paste("Table of genes not detected in",nameDFs[1]),
+                      pageName=paste0(labelDF1,"_notDetected"),
+                      theChoice="captionFilterColName")
+  
+  DF2.notDetected<-setdiff(FullAnnotationList,rownames(DF2))
+  theCaption=paste("Not detected in", nameDFs[2])
+  DF2notDetectedLink<-toNewPage(object=data.frame(ensemblId=DF2.notDetected,name=gene.mapID[DF2.notDetected]),
+                      label=paste("Table of genes not detected in",nameDFs[2]),
+                      pageName=paste0(labelDF2,"_notDetected"),
+                      theChoice="captionFilterColName")
+  
+  neverDetectedGenes<-Intersect(DF1.notDetected,DF2.notDetected)
+  theCaption=paste("Consistantly not detected across",nameDFs[1],"and",nameDFs[2])
+  neverDetectedGenesLink<-toNewPage(object=data.frame(ensemblId=neverDetectedGenes,
+                                                      name=gene.mapID[neverDetectedGenes]),
+                      label=paste("Table of genes consistantly not detected across",nameDFs[1],"and",nameDFs[2]),
+                      pageName="commonly_notDetected",
+                      theChoice="captionFilterColName")
+  
+  printLink<-paste(DF1notDetectedLink,"\n\n",
+                 DF2notDetectedLink, "\n\n",
+                 neverDetectedGenesLink)
+  
+}
+```
+
+```{r geneCat5Da, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D,warning=FALSE}
+if(catDetected){
+  cat("\n## Not detected\n")
+  DF1.notDetected<-setdiff(FullAnnotationList,rownames(DF1))
+  theCaption=paste("Not detected in", nameDFs[1])
+  DF1notDetectedLink<-toNewPage(object=data.frame(ensemblId=DF1.notDetected,name=gene.mapID[DF1.notDetected]),
+                      label=paste("Table of genes not detected in",nameDFs[1]),
+                      pageName=paste0(labelDF1,"_notDetected"),
+                      theChoice="captionFilterColName")
+  
+  DF2.notDetected<-setdiff(FullAnnotationList,rownames(DF2))
+  theCaption=paste("Not detected in", nameDFs[2])
+  DF2notDetectedLink<-toNewPage(object=data.frame(ensemblId=DF2.notDetected,name=gene.mapID[DF2.notDetected]),
+                      label=paste("Table of genes not detected in",nameDFs[2]),
+                      pageName=paste0(labelDF2,"_notDetected"),
+                      theChoice="captionFilterColName")
+  
+  DF3.notDetected<-setdiff(FullAnnotationList,rownames(DF3))
+  theCaption=paste("Not detected in", nameDFs[3])
+  DF3notDetectedLink<-toNewPage(object=data.frame(ensemblId=DF3.notDetected,name=gene.mapID[DF3.notDetected]),
+                      label=paste("Table of genes not detected in",nameDFs[3]),
+                      pageName=paste0(labelDF3,"_notDetected"),
+                      theChoice="captionFilterColName")
+  
+  
+  DF4.notDetected<-setdiff(FullAnnotationList,rownames(DF4))
+  theCaption=paste("Not detected in", nameDFs[4])
+  DF4notDetectedLink<-toNewPage(object=data.frame(ensemblId=DF4.notDetected,name=gene.mapID[DF4.notDetected]),
+                      label=paste("Table of genes not detected in",nameDFs[4]),
+                      pageName=paste0(labelDF4,"_notDetected"),
+                      theChoice="captionFilterColName")
+
+  DF5.notDetected<-setdiff(FullAnnotationList,rownames(DF5))
+  theCaption=paste("Not detected in", nameDFs[5])
+  DF5notDetectedLink<-toNewPage(object=data.frame(ensemblId=DF5.notDetected,name=gene.mapID[DF5.notDetected]),
+                      label=paste("Table of genes not detected in",nameDFs[5]),
+                      pageName=paste0(labelDF5,"_notDetected"),
+                      theChoice="captionFilterColName")
+  
+
+  neverDetectedGenes<-Intersect(DF1.notDetected,DF2.notDetected,
+                                DF3.notDetected,DF4.notDetected,DF5.notDetected)
+  theCaption=paste("Consistantly not detected across",nameDFs[1],", ",nameDFs[2],", ",
+                    nameDFs[3],", ",nameDFs[4] ,  "and",nameDFs[5])
+  neverDetectedGenesLink<-toNewPage(object=data.frame(ensemblId=neverDetectedGenes,name=gene.mapID[neverDetectedGenes]),
+                      label=paste("Table of genes consistantly not detected across",nameDFs[1],",",nameDFs[2],", ",
+                            nameDFs[4],", ",nameDFs[3] ," and ",nameDFs[5]),
+                      pageName="commonly_notDetected",
+                      theChoice="captionFilterColName")
+  
+  printLink<-paste(DF1notDetectedLink, "\n\n",
+                   DF2notDetectedLink, "\n\n",
+                   DF3notDetectedLink, "\n\n",
+                   DF4notDetectedLink, "\n\n",
+                   DF5notDetectedLink, "\n\n",
+                   neverDetectedGenesLink) 
+  
+}
+```
+`r printLink`
+
+```{r geneCat2DNotExp, results='asis', echo=flag4rChunks2D,eval=flag4rChunks2D,warning=FALSE}
+if(catExpressed){
+  cat("\n## Not expressed\n")
+  if(log2scaling) {
+    threshold<-2
+  }else{
+    threshold<-1
+  }
+  DF1.notExpressed<-setdiff(FullAnnotationList,rownames(strip(DF1,'ge',threshold)))
+  theCaption=paste("Genes not expressed in", nameDFs[1])
+  DF1notExpressedLink<-toNewPage(object=data.frame(ensemblId=DF1.notExpressed,name=gene.mapID[DF1.notExpressed]),
+                      label=paste("Table of genes not expressed in",nameDFs[1]),
+                      pageName=paste0(labelDF1,"_notExpressed"),
+                      theChoice="captionFilterColName")
+  
+    
+  DF2.notExpressed<-setdiff(FullAnnotationList,rownames(strip(DF2,'ge',threshold)))
+  theCaption=paste("Genes not expressed in", nameDFs[2])
+  DF2notExpressedLink<-toNewPage(object=data.frame(ensemblId=DF2.notExpressed,name=gene.mapID[DF2.notExpressed]),
+                      label=paste("Table of genes not expressed in",nameDFs[2]),
+                      pageName=paste0(labelDF2,"_notExpressed"),
+                      theChoice="captionFilterColName")
+  
+  neverExpressedGenes<-Intersect(DF1.notExpressed,DF2.notExpressed)
+  theCaption=paste("Consistantly not detected across",nameDFs[1]," and ",nameDFs[2])
+  neverExpressedGenesLink<-toNewPage(object=data.frame(ensemblId=neverExpressedGenes,
+                                                       name=gene.mapID[neverExpressedGenes]),
+                      label=paste("Table of genes consistantly not expressed across",nameDFs[1],"and",nameDFs[2]),
+                      pageName="commonly_notExpressed",
+                      theChoice="captionFilterColName")
+  
+  printLink<-paste(DF1notExpressedLink,"\n\n",
+                   DF2notExpressedLink, "\n\n",
+                   neverExpressedGenesLink)
+}
+```
+
+```{r geneCat5DnotExp, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D,warning=FALSE}
+if(catExpressed){
+  cat("\n## Not expressed\n")
+  if(log2scaling) {
+    threshold<-2
+  }else{
+    threshold<-1
+  }
+
+ DF1.notExpressed<-setdiff(FullAnnotationList,rownames(strip(DF1,'ge',threshold)))
+ theCaption=paste("Genes not expressed in", nameDFs[1])
+ DF1notExpressedLink<-toNewPage(object=data.frame(ensemblId=DF1.notExpressed,name=gene.mapID[DF1.notExpressed]),
+                      label=paste("Table of genes not expressed in",nameDFs[1]),
+                      pageName=paste0(labelDF1,"_notExpressed"),
+                      theChoice="captionFilterColName")
+  
+ DF2.notExpressed<-setdiff(FullAnnotationList,rownames(strip(DF2,'ge',threshold)))
+ theCaption=paste("Genes not expressed in", nameDFs[2])
+ DF2notExpressedLink<-toNewPage(object=data.frame(ensemblId=DF2.notExpressed,name=gene.mapID[DF2.notExpressed]),
+                      label=paste("Table of genes not expressed in",nameDFs[2]),
+                      pageName=paste0(labelDF2,"_notExpressed"),
+                      theChoice="captionFilterColName")
+ 
+ DF3.notExpressed<-setdiff(FullAnnotationList,rownames(strip(DF3,'ge',threshold)))
+ theCaption=paste("Genes not expressed in", nameDFs[3])
+ DF3notExpressedLink<-toNewPage(object=data.frame(ensemblId=DF3.notExpressed,name=gene.mapID[DF3.notExpressed]),
+                      label=paste("Table of genes not expressed in",nameDFs[3]),
+                      pageName=paste0(labelDF3,"_notExpressed"),
+                      theChoice="captionFilterColName")
+
+ 
+ DF4.notExpressed<-setdiff(FullAnnotationList,rownames(strip(DF4,'ge',threshold)))
+ theCaption=paste("Genes not expressed in", nameDFs[4])
+ DF4notExpressedLink<-toNewPage(object=data.frame(ensemblId=DF4.notExpressed,name=gene.mapID[DF4.notExpressed]),
+                      label=paste("Table of genes not expressed in",nameDFs[4]),
+                      pageName=paste0(labelDF4,"_notExpressed"),
+                      theChoice="captionFilterColName")
+ 
+ DF5.notExpressed<-setdiff(FullAnnotationList,rownames(strip(DF5,'ge',threshold)))
+ theCaption=paste("Genes not expressed in", nameDFs[5])
+ DF5notExpressedLink<-toNewPage(object=data.frame(ensemblId=DF5.notExpressed,name=gene.mapID[DF5.notExpressed]),
+                      label=paste("Table of genes not expressed in",nameDFs[5]),
+                      pageName=paste0(labelDF5,"_notExpressed"),
+                      theChoice="captionFilterColName")
+
+
+ neverExpressedGenes<-Intersect(DF1.notExpressed,DF2.notExpressed,
+                                DF3.notExpressed,DF4.notExpressed,DF5.notExpressed)
+ theCaption=paste("Consistantly not detected across",nameDFs[1],", ",nameDFs[2],", ",
+                    nameDFs[3],", ",nameDFs[4], "and",nameDFs[5])
+ neverExpressedGenesLink<-toNewPage(object=data.frame(ensemblId=neverExpressedGenes,name=gene.mapID[neverExpressedGenes]),
+                      label=paste("Table of genes consistantly not expressed across",nameDFs[1],",",nameDFs[2],", ",
+                            nameDFs[4],", ",nameDFs[3] ," and ",nameDFs[5]),
+                      pageName="commonly_notExpressed",
+                      theChoice="captionFilterColName")
+ 
+ printLink<-paste(DF1notExpressedLink, "\n\n",
+                  DF2notExpressedLink, "\n\n",
+                  DF3notExpressedLink, "\n\n",
+                  DF4notExpressedLink, "\n\n",
+                  DF5notExpressedLink, "\n\n",
+                  neverExpressedGenesLink) 
+}
+
+```
+
+`r printLink`
+
+
+```{r geneCat2Db, results='asis', echo=flag4rChunks2D,eval=flag4rChunks2D,warning=FALSE}
+cat("\n## Other Uhlén-like categories\n")
+
+DF1.enriched<-enrichedTissue(DF1,verbose = FALSE)
+cat(paste(nameDFs[1],'enriched genes for each of the common tissues'))
+pander::pander(summary(as.factor(DF1.enriched)))
+
+DF1.enhanced<-enhancedTissue(DF1)
+DF1.ubiHigh<-ubi.high(DF1,threshold=lowHighCut)
+DF1.ubiLow<-ubi.low(DF1,threshold=lowHighCut)
+DF1.mixHigh<-mixed.high2(DF1,threshold=lowHighCut)
+DF1.mixLow<-mixed.low2(DF1,threshold=lowHighCut)
+
+DF1.uhlenCat<-sortUhlenClassInOne(Enriched = DF1.enriched,
+                                  Enhanced = DF1.enhanced,
+                                  ubiHigh = DF1.ubiHigh,
+                                  ubiLow = DF1.ubiLow,
+                                  mixedHigh = DF1.mixHigh,
+                                  mixedLow = DF1.mixLow,
+                                  gene.mapID = gene.mapID,
+                                  threshold=cutoff)
+
+
+theCaption=paste("Uhlen-like gene categories for", nameDFs[1])
+DF1UhlenLink<-toNewPage(object=DF1.uhlenCat,
+                      label=paste("Table of the genes of ",nameDFs[1],
+                                   "that correspond to a class of the Uhlen-like categories"),
+                      pageName=paste0(labelDF1,"_uhlenCat"),
+                      theChoice="captionFilter")
+    
+DF2.enriched<-enrichedTissue(DF2,verbose = FALSE)
+cat(paste(nameDFs[2],'enriched genes for each of the common tissues'))
+pander::pander(summary(as.factor(DF2.enriched)))
+
+DF2.enhanced<-enhancedTissue(DF2)
+DF2.ubiHigh<-ubi.high(DF2,threshold=lowHighCut)
+DF2.ubiLow<-ubi.low(DF2,threshold=lowHighCut)
+DF2.mixHigh<-mixed.high2(DF2,threshold=lowHighCut)
+DF2.mixLow<-mixed.low2(DF2,threshold=lowHighCut)
+
+DF2.uhlenCat<-sortUhlenClassInOne(Enriched = DF2.enriched,
+                                  Enhanced = DF2.enhanced,
+                                  ubiHigh = DF2.ubiHigh,
+                                  ubiLow = DF2.ubiLow,
+                                  mixedHigh = DF2.mixHigh,
+                                  mixedLow = DF2.mixLow,
+                                  gene.mapID = gene.mapID,
+                                  threshold=cutoff)
+  
+theCaption=paste("Uhlen-like gene categories for", nameDFs[2])
+DF2UhlenLink<-toNewPage(object=DF2.uhlenCat,
+                      label=paste("Table of the genes of ",nameDFs[2],
+                                   "that correspond to a class of the Uhlen-like categories"),
+                      pageName=paste0(labelDF2,"_uhlenCat"),
+                      theChoice="captionFilter")
+
+common.enriched <- Intersect(names(DF1.enriched),names(DF2.enriched))
+names(common.enriched)<-common.enriched
+common.enhanced <- Intersect(names(DF1.enhanced),names(DF2.enhanced))
+names(common.enhanced)<-common.enhanced
+common.ubiHigh  <- Intersect(DF1.ubiHigh,DF2.ubiHigh)
+common.ubiLow   <- Intersect(DF1.ubiLow,DF2.ubiLow)
+common.mixHigh  <- Intersect(names(DF1.mixHigh),names(DF2.mixHigh))
+names(common.mixHigh)<-common.mixHigh
+common.mixLow   <- Intersect(names(DF1.mixLow),names(DF2.mixLow))
+names(common.mixLow)<-common.mixLow
+
+printLink<-paste(DF1UhlenLink,"\n\n",DF2UhlenLink)
+```
+
+
+```{r geneCat5Db, results='asis', echo=flag4rChunks5D,eval=flag4rChunks5D,warning=FALSE}
+cat("\n## Uhlén-like categories\n")
+
+DF1.enriched<-enrichedTissue(DF1,verbose=FALSE)
+cat(paste(nameDFs[1],'enriched genes for each of the common tissues'))
+pander::pander(summary(as.factor(DF1.enriched)))
+DF1.enhanced<-enhancedTissue(DF1)
+DF1.ubiHigh<-ubi.high(DF1,threshold=lowHighCut)
+DF1.ubiLow<-ubi.low(DF1,threshold=lowHighCut)
+DF1.mixHigh<-mixed.high2(DF1,threshold=lowHighCut)
+DF1.mixLow<-mixed.low2(DF1,threshold=lowHighCut)
+
+DF1.uhlenCat<-sortUhlenClassInOne(Enriched = DF1.enriched,
+                                  Enhanced = DF1.enhanced,
+                                  ubiHigh = DF1.ubiHigh,
+                                  ubiLow = DF1.ubiLow,
+                                  mixedHigh = DF1.mixHigh,
+                                  mixedLow = DF1.mixLow,
+                                  gene.mapID = gene.mapID,
+                                  threshold=cutoff)
+
+theCaption=paste("Uhlen-like gene categories for", nameDFs[1])
+DF1UhlenLink<-toNewPage(object=DF1.uhlenCat,
+                      label=paste("Table of the genes of ",nameDFs[1],
+                                   "that correspond to a class of the Uhlen-like categories"),
+                      pageName=paste0(labelDF1,"_uhlenCat"),
+                      theChoice="captionFilter")
+
+
+DF2.enriched<-enrichedTissue(DF2,verbose=FALSE)
+cat(paste(nameDFs[2],'enriched genes for each of the common tissues'))
+pander::pander(summary(as.factor(DF2.enriched)))
+DF2.enhanced<-enhancedTissue(DF2)
+DF2.ubiHigh<-ubi.high(DF2,threshold=lowHighCut)
+DF2.ubiLow<-ubi.low(DF2,threshold=lowHighCut)
+DF2.mixHigh<-mixed.high2(DF2,threshold=lowHighCut)
+DF2.mixLow<-mixed.low2(DF2,threshold=lowHighCut)
+
+DF2.uhlenCat<-sortUhlenClassInOne(Enriched = DF2.enriched,
+                                  Enhanced = DF2.enhanced,
+                                  ubiHigh = DF2.ubiHigh,
+                                  ubiLow = DF2.ubiLow,
+                                  mixedHigh = DF2.mixHigh,
+                                  mixedLow = DF2.mixLow,
+                                  gene.mapID = gene.mapID,
+                                  threshold=cutoff)
+
+theCaption=paste("Uhlen-like gene categories for", nameDFs[2])
+DF2UhlenLink<-toNewPage(object=DF2.uhlenCat,
+                      label=paste("Table of the genes of ",nameDFs[2],
+                                   "that correspond to a class of the Uhlen-like categories"),
+                      pageName=paste0(labelDF2,"_uhlenCat"),
+                      theChoice="captionFilter")
+
+
+DF3.enriched<-enrichedTissue(DF3,verbose=FALSE)
+cat(paste(nameDFs[3],'enriched genes for each of the common tissues'))
+pander::pander(summary(as.factor(DF2.enriched)))
+DF3.enhanced<-enhancedTissue(DF3)
+DF3.ubiHigh<-ubi.high(DF3,threshold=lowHighCut)
+DF3.ubiLow<-ubi.low(DF3,threshold=lowHighCut)
+DF3.mixHigh<-mixed.high2(DF3,threshold=lowHighCut)
+DF3.mixLow<-mixed.low2(DF3,threshold=lowHighCut)
+
+DF3.uhlenCat<-sortUhlenClassInOne(Enriched = DF3.enriched,
+                                  Enhanced = DF3.enhanced,
+                                  ubiHigh = DF3.ubiHigh,
+                                  ubiLow = DF3.ubiLow,
+                                  mixedHigh = DF3.mixHigh,
+                                  mixedLow = DF3.mixLow,
+                                  gene.mapID = gene.mapID,
+                                  threshold=cutoff)
+
+theCaption=paste("Uhlen-like gene categories for", nameDFs[3])
+DF3UhlenLink<-toNewPage(object=DF3.uhlenCat,
+                      label=paste("Table of the genes of ",nameDFs[3],
+                                   "that correspond to a class of the Uhlen-like categories"),
+                      pageName=paste0(labelDF3,"_uhlenCat"),
+                      theChoice="captionFilter")
+
+DF4.enriched<-enrichedTissue(DF4,verbose=FALSE)
+cat(paste(nameDFs[4],'enriched genes for each of the common tissues'))
+pander::pander(summary(as.factor(DF4.enriched)))
+DF4.enhanced<-enhancedTissue(DF4)
+DF4.ubiHigh<-ubi.high(DF4,threshold=lowHighCut)
+DF4.ubiLow<-ubi.low(DF4,threshold=lowHighCut)
+DF4.mixHigh<-mixed.high2(DF4,threshold=lowHighCut)
+DF4.mixLow<-mixed.low2(DF4,threshold=lowHighCut)
+
+DF4.uhlenCat<-sortUhlenClassInOne(Enriched = DF4.enriched,
+                                  Enhanced = DF4.enhanced,
+                                  ubiHigh = DF4.ubiHigh,
+                                  ubiLow = DF4.ubiLow,
+                                  mixedHigh = DF4.mixHigh,
+                                  mixedLow = DF4.mixLow,
+                                  gene.mapID = gene.mapID,
+                                  threshold=cutoff)
+
+theCaption=paste("Uhlen-like gene categories for", nameDFs[4])
+DF4UhlenLink<-toNewPage(object=DF4.uhlenCat,
+                      label=paste("Table of the genes of ",nameDFs[4],
+                                   "that correspond to a class of the Uhlen-like categories"),
+                      pageName=paste0(labelDF4,"_uhlenCat"),
+                      theChoice="captionFilter")
+  
+
+DF5.enriched<-enrichedTissue(DF5,verbose=FALSE)
+cat(paste(nameDFs[5],'enriched genes for each of the common tissues'))
+pander::pander(summary(as.factor(DF5.enriched)))
+DF5.enhanced<-enhancedTissue(DF5)
+DF5.ubiHigh<-ubi.high(DF5,threshold=lowHighCut)
+DF5.ubiLow<-ubi.low(DF5,threshold=lowHighCut)
+DF5.mixHigh<-mixed.high2(DF5,threshold=lowHighCut)
+DF5.mixLow<-mixed.low2(DF5,threshold=lowHighCut)
+
+DF5.uhlenCat<-sortUhlenClassInOne(Enriched = DF5.enriched,
+                                  Enhanced = DF5.enhanced,
+                                  ubiHigh = DF5.ubiHigh,
+                                  ubiLow = DF5.ubiLow,
+                                  mixedHigh = DF5.mixHigh,
+                                  mixedLow = DF5.mixLow,
+                                  gene.mapID = gene.mapID,
+                                  threshold=cutoff)
+
+theCaption=paste("Uhlen-like gene categories for", nameDFs[5])
+DF5UhlenLink<-toNewPage(object=DF5.uhlenCat,
+                      label=paste("Table of the genes of ",nameDFs[5],
+                                   "that correspond to a class of the Uhlen-like categories"),
+                      pageName=paste0(labelDF5,"_uhlenCat"),
+                      theChoice="captionFilter")
+
+common.enriched<-Intersect(names(DF1.enriched),names(DF2.enriched),
+                           names(DF3.enriched),names(DF4.enriched),names(DF5.enriched))
+names(common.enriched)<-common.enriched
+
+common.enhanced<-Intersect(names(DF1.enhanced),names(DF2.enhanced),names(DF3.enhanced),
+                           names(DF4.enhanced),names(DF5.enhanced))
+names(common.enhanced)<-common.enhanced
+common.ubiHigh <-Intersect(DF1.ubiHigh,DF2.ubiHigh,DF3.ubiHigh,DF4.ubiHigh,DF5.ubiHigh)
+common.ubiLow  <-Intersect(DF1.ubiLow,DF2.ubiLow,DF3.ubiLow,DF4.ubiLow,DF5.ubiLow)
+common.mixHigh <-Intersect(names(DF1.mixHigh),names(DF2.mixHigh),names(DF3.mixHigh),
+                           names(DF4.mixHigh),names(DF5.mixHigh))
+names(common.mixHigh)<-common.mixHigh
+common.mixLow  <-Intersect(names(DF1.mixLow),names(DF2.mixLow),names(DF3.mixLow),
+                           names(DF4.mixLow),names(DF5.mixLow))
+names(common.mixLow)<-common.mixLow
+
+
+printLink<-paste(DF1UhlenLink,"\n\n",DF2UhlenLink,"\n\n",
+                 DF3UhlenLink,"\n\n",DF4UhlenLink,"\n\n",
+                 DF5UhlenLink)
+```
+
+```{r geneCat, results='asis', echo=flag4rChunks,eval=flag4rChunks,warning=FALSE}
+uhlenCat<-sortUhlenClassInOne(Enriched = common.enriched,
+                              Enhanced = common.enhanced,
+                              ubiHigh = common.ubiHigh,
+                              ubiLow = common.ubiLow,
+                              mixedHigh = setNames(common.mixHigh,common.mixHigh),
+                              mixedLow = setNames(common.mixLow,common.mixLow),
+                              gene.mapID = gene.mapID,
+                              threshold=cutoff)
+  
+theCaption=paste("Uhlen-like gene categories that are consistent for the",
+                  length(nameDFs), "datasets (at",cutoff,normMethod,')')
+uhlencatLink<-toNewPage(object=uhlenCat,
+                      label=paste("Uhlen-like gene categories that are consistent for the",
+                                   length(nameDFs), "datasets (at",cutoff,normMethod,')'),
+                      pageName="common_uhlenCat",
+                      theChoice="captionFilter")
+
+printLink<-paste(printLink,"\n\n",uhlencatLink)
+```
+
+`r printLink`
+
+
+```{r coeffVarHeaders, results='asis', echo=FALSE,eval=flag4rChunks}
+cat("# Coefficient of variation of the data")
+```
+
+```{r coefficientVariation, results='asis', echo=flag4rChunks,eval=flag4rChunks,warning=FALSE}
+DF1.cv<-rowCV(DF1,4)
+DF2.cv<-rowCV(DF2,4)
+
+coeffVar<-rbind(data.frame(Study=nameDFs[1],cv=DF1.cv,GeneID=names(DF1.cv)),
+             data.frame(Study=nameDFs[2],cv=DF2.cv,GeneID=names(DF2.cv)))
+
+theCaption<-paste("Coefficient of variation of the common genes for the common tissues across",
+                  nameDFs[1],"and ",nameDFs[2])
+theLabel<-paste("Table of the coefficients of variation of the common genes for the common tissues across",                                nameDFs[1],"and",nameDFs[2])
+
+if(compDF==5){
+  DF3.cv<-rowCV(DF3,4)
+  DF4.cv<-rowCV(DF4,4)
+  DF5.cv<-rowCV(DF5,4)
+  coeffVar<-rbind(coeffVar,
+                  data.frame(Study=nameDFs[3],cv=DF3.cv,GeneID=names(DF3.cv)),
+                  data.frame(Study=nameDFs[4],cv=DF3.cv,GeneID=names(DF4.cv)),
+                  data.frame(Study=nameDFs[5],cv=DF5.cv,GeneID=names(DF5.cv)))
+  
+  theCaption=paste("Coefficient of variation of the common genes for the common tissues across",
+                  nameDFs[1],", ",nameDFs[2],", ",  nameDFs[3],", ",nameDFs[4], "and",nameDFs[5])
+  theLabel= paste("Table of the coefficients of variation of the common genes for the common tissues across",                                nameDFs[1],",",nameDFs[2],", ", nameDFs[4],", ",nameDFs[3] ," and ",nameDFs[5])
+}
+
+ggplot(coeffVar,aes(x=cv))+geom_density()+facet_wrap(~Study,nrow=2)+theme_minimaliste(base_family='Linux Libertine')
+
+coeffvarLink<-toNewPage(object=coeffVar,
+                          label=theLabel,
+                          pageName="coeffvarData",
+                          theChoice="captionFilter")
+
+printLink<-coeffvarLink
+```
+
+`r printLink`

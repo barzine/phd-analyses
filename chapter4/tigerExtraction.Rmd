@@ -1,0 +1,399 @@
+---
+title: "Extraction and conversion of TiGER genes"
+author: "Mitra Barzine"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+    theme: united
+    highlight: pygments
+    smart: true
+    df_print: paged
+    css: ../styles.css
+    includes:
+      after_body: ../footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r initalisation}
+suppressPackageStartupMessages(library(barzinePhdR))
+suppressPackageStartupMessages(library(barzinePhdAnalyses))
+pDF<-function(x,pageLength=15){
+  DT::datatable( signif(x ,2) ,
+                 extensions = c('Responsive','Buttons','ColReorder'),
+                 options = list(pageLength = pageLength,
+                                dom='Blfrtip',
+                                buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print'),
+                                colReorder = list(realtime = FALSE)))
+}
+```
+
+[TiGER](http://bioinfo.wilmer.jhu.edu/tiger/) {X. Liu et al., 2008}[^1] reports TS genes for thirty independent tissues (based on ESTs experiments).
+
+[^1]: Liu, X., X. Yu, D. J. Zack, H. Zhu, and J. Qian (2008). ‘TiGER: a database for tissue-specific gene expression and regulation’. BMC Bioinformatics 9, p. 271")
+
+>Note: this report is for completion only, the biomart version (76) used in this thesis isn't directly available online anymore.
+
+# Loading the data
+
+```{r listTissueTiger}
+TigerTissues=c('bladder','blood','bone','bone_marrow','brain',
+               'cervix','colon','eye','heart','kidney',
+               'larynx','liver','lung','lymph_node',
+               'mammary_gland','muscle','ovary','pancreas',
+               'peripheral_nervous_system','placenta','prostate',
+               'skin','small_intestine','soft_tissue','spleen',
+               'stomach','testis','thymus','tongue','uterus')
+```
+
+```{r tigerExtract, eval=FALSE}
+#### NOT BEING RUN ###########
+bladder<-read.table("bladder_genes.txt",sep='\t',header=TRUE)
+blood<-read.table("blood_genes.txt",sep='\t',header=TRUE)
+bone<-read.table("bone_genes.txt",sep='\t',header=TRUE)
+bone_marrow<-read.table("bone_marrow_genes.txt",sep='\t',header=TRUE)
+brain<-read.table("brain_genes.txt",sep='\t',header=TRUE)
+cervix<-read.table("cervix_genes.txt",sep='\t',header=TRUE)
+colon<-read.table("colon_genes.txt",sep='\t',header=TRUE)
+eye<-read.table("eye_genes.txt",sep='\t',header=TRUE)
+heart<-read.table("heart_genes.txt",sep='\t',header=TRUE)
+kidney<-read.table("kidney_genes.txt",sep='\t',header=TRUE)
+larynx<-read.table("larynx_genes.txt",sep='\t',header=TRUE)
+liver<-read.table("liver_genes.txt",sep='\t',header=TRUE)
+lung<-read.table("lung_genes.txt",sep='\t',header=TRUE)
+lymph_node<-read.table("lymph_node_genes.txt",sep='\t',header=TRUE)
+mammary_gland<-read.table("mammary_gland_genes.txt",sep='\t',header=TRUE)
+muscle<-read.table("muscle_genes.txt",sep='\t',header=TRUE)
+ovary<-read.table("ovary_genes.txt",sep='\t',header=TRUE)
+pancreas<-read.table("pancreas_genes.txt",sep='\t',header=TRUE)
+peripheral_nervous_system<-read.table("peripheral_nervous_system_genes.txt",sep='\t',header=TRUE)
+placenta<-read.table("placenta_genes.txt"),sep='\t',header=TRUE)
+prostate<-read.table("prostate_genes.txt"),sep='\t',header=TRUE)
+skin<-read.table("skin_genes.txt"),sep='\t',header=TRUE)
+small_intestine<-read.table("small_intestine_genes.txt"),sep='\t',header=TRUE)
+soft_tissue<-read.table("soft_tissue_genes.txt"),sep='\t',header=TRUE)
+spleen<-read.table("spleen_genes.txt"),sep='\t',header=TRUE)
+stomach<-read.table("stomach_genes.txt"),sep='\t',header=TRUE)
+testis<-read.table("testis_genes.txt"),sep='\t',header=TRUE)
+thymus<-read.table("thymus_genes.tx"),sep='\t',header=TRUE)
+tongue<-read.table("tongue_genes.txt"),sep='\t',header=TRUE)
+uterus<-read.table("uterus_genes.txt"),sep='\t',header=TRUE)
+
+tmp<-lapply(setNames(TigerTissues,TigerTissues), function(x) rlang::eval_tidy(rlang::sym(x)))
+```
+
+The data has been retrieved from TiGER previously.
+
+# Conversion 
+
+I used the bioconductor package [`biomaRt`](https://bioconductor.org/packages/release/bioc/html/biomaRt.html) to convert
+the Refseq ids into Ensembl (version 76) ids.
+
+```{r convert,eval=FALSE}
+# NOT BEING RUN --- For completion only
+require(biomaRt)
+ens76<-useMart(host='aug2014.archive.ensembl.org',
+               biomart='ENSEMBL_MART_ENSEMBL',
+               dataset='hsapiens_gene_ensembl')
+
+tmp_extractRefseq<-lapply(setNames(tmp,names(tmp)),function(x) return(as.character(x$RefSeq )))
+
+translateTiger<-lapply(tmp_extractRefseq, function(tissue_genes){
+  mRnaRefseqIds = getBM(attributes=c('refseq_mrna','ensembl_gene_id'),  
+                        filters='refseq_mrna',values=tissue_genes, mart=ens76)
+  colnames(mRnaRefseqIds)<-c("refseq_id","ensembl_id")
+  
+  predictedmRnaRefseqIds = getBM(attributes=c('refseq_mrna_predicted','ensembl_gene_id'),  
+        filters='refseq_mrna_predicted',values=tissue_genes, 
+        mart=ens76)
+  colnames(predictedmRnaRefseqIds)<-c("refseq_id","ensembl_id")
+
+  predictedRnaRefseqIds = getBM(attributes=c('refseq_rna_predicted','ensembl_gene_id'),  
+        filters='refseq_rna_predicted',values=tissue_genes, 
+        mart=ens76)
+  colnames(predictedRnaRefseqIds)<-c("refseq_id","ensembl_id")
+
+  DnaRefseqIds = getBM(attributes=c('refseq_dna','ensembl_gene_id'),  
+        filters='refseq_dna',values=tissue_genes, 
+        mart=ens76)
+  colnames(DnaRefseqIds)<-c("refseq_id","ensembl_id")
+
+  predictedDnaRefseqIds = getBM(attributes=c('refseq_dna_predicted','ensembl_gene_id'),  
+        filters='refseq_dna_predicted',values=tissue_genes, 
+        mart=ens76)
+  colnames(predictedDnaRefseqIds)<-c("refseq_id","ensembl_id")
+
+  predictedncRnaRefseqIds = getBM(attributes=c('refseq_ncrna_predicted','ensembl_gene_id'),  
+        filters='refseq_ncrna_predicted',values=tissue_genes, 
+        mart=ens76)
+  colnames(predictedncRnaRefseqIds)<-c("refseq_id","ensembl_id")
+
+return(list(refseq_mrna=mRnaRefseqIds,
+            refseq_mrna_predicted=predictedmRnaRefseqIds,
+            refseq_rna_predicted=predictedRnaRefseqIds,
+            refseq_dna=DnaRefseqIds,
+            refseq_dna_predicted=predictedDnaRefseqIds,
+            refseq_ncrna_predicted=predictedncRnaRefseqIds))
+})
+
+TigerGenes<-lapply(translateTiger, function(tissue_genes){
+ completeDF<-Reduce(rbind,tissue_genes)
+  return(completeDF[!duplicated(completeDF),])
+})
+```
+
+
+```{r tigerGenesFilteringFormating, results="asis"}
+TigerGenes<-rlang::eval_tidy(rlang::parse_expr("barzinePhdAnalyses::TigerGenes"))
+
+#List per tissue pairs of the IDs found in two tissue
+TigerGenesNonUnique<-as.data.frame(t(combn(names(TigerGenes),2)),stringsAsFactors = FALSE)
+TigerGenesNonUnique$intersect<-lapply(1:nrow(TigerGenesNonUnique),function(x){
+  return(intersect(TigerGenes[[TigerGenesNonUnique[x,]$V1]]$ensembl_id,
+                   TigerGenes[[TigerGenesNonUnique[x,]$V2]]$ensembl_id)
+)})
+#List per tissue of the IDs also found in another tissue (no record of which other tissue)
+TigerGenesNonUniquePerTissue<-lapply(setNames(names(TigerGenes),names(TigerGenes)),
+                                     function(x){
+                                      tempo<-lapply(1:nrow(TigerGenesNonUnique),
+                                             function(y){
+                                               if(TigerGenesNonUnique[y,]$V1==x){
+                                                 return(unlist(TigerGenesNonUnique[y,]$intersect))
+                                               }else{
+                                                 if(TigerGenesNonUnique[y,]$V2==x){
+                                                   return(unlist(TigerGenesNonUnique[y,]$intersect))
+                                                 }else{
+                                                   return(NULL)
+                                                 }
+                                               }
+                                             })
+                                      tempo<-unlist(tempo)
+                                      tempo<-tempo[!duplicated(tempo)]
+                                      return(tempo)
+})
+
+TigerUniquePerTissueSimplified<-lapply(setNames(names(TigerGenes),names(TigerGenes)), function(x){
+                      return(setdiff(TigerGenes[[x]]$ensembl_id,TigerGenesNonUniquePerTissue[[x]]))
+})
+
+
+
+TigerUniquePerTissue<-lapply(setNames(TigerTissues,TigerTissues),function(x){
+         return(TigerGenes[[x]][TigerGenes[[x]]$ensembl_id %in% TigerUniquePerTissueSimplified[[x]], ]
+                                          )
+})
+
+nbNonUniquePerTissue<-sapply(setNames(TigerGenesNonUniquePerTissue,names(TigerGenesNonUniquePerTissue)),
+                      function(x) return(length(x)))
+
+total<-sapply(setNames(TigerGenes,names(TigerGenes)),function(x) nrow(x))
+thediag<-total-nbNonUniquePerTissue
+
+#Record how many tissue are 
+half<-as.data.frame(t(combn(names(TigerGenes),2)),stringsAsFactors = FALSE)
+half$intersect<-sapply(1:nrow(half),function(x) {
+                          return(
+                          length(
+                          intersect(TigerGenes[[half[x,]$V1]]$ensembl_id,TigerGenes[[half[x,]$V2]]$ensembl_id)
+                          )
+                          )
+  })
+
+complete<-rbind(half,data.frame(V1=half$V2,V2=half$V1,
+                                "intersect"=half$intersect,stringsAsFactors=FALSE))
+complete<-rbind(complete,data.frame(V1=names(thediag),V2=names(thediag),
+                                    "intersect"=thediag,stringsAsFactors = FALSE))
+
+
+TigerSum<-reshape2::dcast(complete,V1~V2,value.var="intersect")
+rownames(TigerSum)<-TigerSum$V1
+TigerSum<-TigerSum[,-1]
+cat('<caption> Number of genes that are identified for each couple of tissues: </caption>')
+pDF(TigerSum)
+```
+
+# Browsable data
+
+```{r, results='asis'}
+cat("## Per Tissue {.tabset .tabset-pills}", "\n")
+cat("Click on any tissue name to show the list of TS genes uniquely found in that tissue\n\n")
+tmpO<-lapply(names(TigerUniquePerTissue),function(x){
+  
+  cat(paste0("### ",simpleCap(gsub("_"," ",x)),"\n"))
+  tmp<-TigerUniquePerTissue[[x]]
+  tmp$g.name<-barzinePhdData::gene.mapID[tmp$ensembl_id]
+  cat(knitr::knit_print(DT::datatable(tmp,
+                                      rownames = FALSE,
+                                      colnames = c('Refseq', 'Ensembl (76)','Name'),
+                                      options = list(dom='flrtip'))
+                                      ))
+  cat("\n\n")
+})
+```
+
+## All genes for all available tissues (including duplicates)
+```{r allTogether, results='asis'}
+allTiger<-Reduce(rbind,lapply(names(TigerGenes),function(x){
+  tmp<-TigerGenes[[x]]
+  tmp$g.name<-barzinePhdData::gene.mapID[tmp$ensembl_id]
+  tmp$tissue<-x
+  return(tmp)
+}))
+
+DT::datatable(allTiger,
+              rownames = FALSE,
+              colnames = c('Refseq', 'Ensembl (76)','Name','Tissue'),
+              options = list(dom='flrtip'))
+```
+
+## No duplicate
+```{r allTigerNoDupGenes}
+allTigerNoDup<-Reduce(rbind,lapply(names(TigerUniquePerTissue),function(x){
+  tmp<-TigerUniquePerTissue[[x]]
+  tmp$g.name<-barzinePhdData::gene.mapID[tmp$ensembl_id]
+  tmp$tissue<-x
+  return(tmp)
+}))
+
+DT::datatable(allTigerNoDup,
+              rownames = FALSE,
+              colnames = c('Refseq', 'Ensembl (76)','Name','Tissue'),
+              options = list(dom='flrtip'))
+```
+
+# Subset for the two combined datasets
+
+## Four tissues 
+
+Heart, Kidney, Liver and Testis
+
+```{r, tissue4Tiger}
+tissue4<-c('heart','kidney','liver','testis')
+
+Tiger4Tissues<-allTigerNoDup[allTigerNoDup$tissue %in% tissue4,]
+
+DT::datatable(Tiger4Tissues,
+              rownames = FALSE,
+              colnames = c('Refseq', 'Ensembl (76)','Name','Tissue'),
+              options = list(dom='flrtip'))
+```
+
+### Used in the thesis
+After manual inspection of the genes expression across the different studies, I have selected a few to represent the various cases in the thesis.
+```{r smallerMixFor4T}
+subsetTigerheart<-c('ENSG00000172399','ENSG00000091482','ENSG00000118729',
+                    'ENSG00000122367','ENSG00000121577','ENSG00000169271',
+                    'ENSG00000036448','ENSG00000101605','ENSG00000170323',
+                    'ENSG00000166317','ENSG00000205678','ENSG00000198626',
+                    'ENSG00000147166','ENSG00000153820','ENSG00000102683',
+                    'ENSG00000183023','ENSG00000239474','ENSG00000170290',
+                    'ENSG00000134571','ENSG00000106631','ENSG00000175206',
+                    'ENSG00000120937','ENSG00000077522','ENSG00000129991',
+                    'ENSG00000129170','ENSG00000159251','ENSG00000148677',
+                    'ENSG00000197616','ENSG00000092054','ENSG00000111245',
+                    'ENSG00000114854','ENSG00000173641','ENSG00000160808',
+                    'ENSG00000140416','ENSG00000022267','ENSG00000198523',
+                    'ENSG00000175084')
+
+subsetTigerkidney<-c('ENSG00000144035','ENSG00000174358','ENSG00000149452',
+                     'ENSG00000131183','ENSG00000184908','ENSG00000100253',
+                     'ENSG00000162366','ENSG00000166589','ENSG00000167580',
+                     'ENSG00000138079','ENSG00000070915','ENSG00000137251',
+                     'ENSG00000166828','ENSG00000115112','ENSG00000116218',
+                     'ENSG00000074803','ENSG00000104327','ENSG00000107611',
+                     'ENSG00000081479','ENSG00000133116','ENSG00000112499',
+                     'ENSG00000081800','ENSG00000010932','ENSG00000138798',
+                     'ENSG00000086991','ENSG00000113946','ENSG00000184434',
+                     'ENSG00000198914','ENSG00000111012','ENSG00000167748',
+                     'ENSG00000178828','ENSG00000156413','ENSG00000007216',
+                     'ENSG00000275410','ENSG00000100362','ENSG00000143839')
+
+subsetTigerliver<-c('ENSG00000110169','ENSG00000180210','ENSG00000145192',
+                    'ENSG00000198099','ENSG00000132703','ENSG00000117601',
+                    'ENSG00000130649','ENSG00000138115','ENSG00000151224',
+                    'ENSG00000091513','ENSG00000123838','ENSG00000138109',
+                    'ENSG00000198650','ENSG00000118520','ENSG00000113600',
+                    'ENSG00000084674','ENSG00000214274','ENSG00000198848',
+                    'ENSG00000248144','ENSG00000130208','ENSG00000110245',
+                    'ENSG00000109072','ENSG00000164237')
+
+subsetTigertestis<-c('ENSG00000175646','ENSG00000118245','ENSG00000122304',
+                     'ENSG00000066185','ENSG00000119703','ENSG00000163071',
+                     'ENSG00000138613','ENSG00000172671','ENSG00000079387',
+                     'ENSG00000145850','ENSG00000167920','ENSG00000163521',
+                     'ENSG00000128346','ENSG00000099840','ENSG00000178093',
+                     'ENSG00000161036','ENSG00000075886')
+
+subsetTigermix<-c('ENSG00000203942','ENSG00000164919','ENSG00000164258',
+                  'ENSG00000119471','ENSG00000143256','ENSG00000182117',
+                  'ENSG00000164825','ENSG00000171234','ENSG00000124253',
+                  'ENSG00000140284')
+
+smallerSubsetTigerMix<-c(subsetTigerheart,subsetTigerkidney,subsetTigerliver,subsetTigertestis)
+
+if(all(smallerSubsetTigerMix %in%  
+       allTiger[allTiger$tissue %in% c('heart','liver','kidney','testis'),]$ensembl_id)){
+  definitionInTiger<-"All the genes in `smallerSubsetTigerMix` are annotated as TS either for heart, kidney, liver or testis in TiGER."
+  }else{
+    definitionInTiger<-"Some genes in `smallerSubsetTigerMix` are NOT annotated in TiGER as TS genes for any of the following tissues: heart, kidney, liver and testis."
+  }
+
+selectTigerGenes<-c("ENSG00000120937","ENSG00000106631","ENSG00000129991",
+               "ENSG00000169271","ENSG00000204683","ENSG00000139780",
+               "ENSG00000205076","ENSG00000169344","ENSG00000100253" ,
+               "ENSG00000074803","ENSG00000149452","ENSG00000166589",
+               "ENSG00000125255","ENSG00000198398","ENSG00000124253",
+               "ENSG00000118785","ENSG00000125726","ENSG00000080910",
+               "ENSG00000134538","ENSG00000111700","ENSG00000108242",
+               "ENSG00000123561","ENSG00000224916","ENSG00000101323",
+               "ENSG00000135940","ENSG00000204444","ENSG00000092345",
+               "ENSG00000170950","ENSG00000186075","ENSG00000175520",
+               "ENSG00000166669","ENSG00000153140","ENSG00000121058",
+               "ENSG00000013297","ENSG00000010318", 
+               "ENSG00000163380", #heart & muscle
+               "ENSG00000111245", #heart & muscle
+               "ENSG00000135374", #heart & stomach
+               "ENSG00000123364", #heart & cervix
+               "ENSG00000183888", #kidney & mammary_gland
+               "ENSG00000138347", #liver & larynx
+               "ENSG00000165702"  #liver & spleen
+)
+
+if(all(selectTigerGenes %in%  
+       allTiger[allTiger$tissue %in% c('heart','liver','kidney','testis'),]$ensembl_id)){
+  definitionInTiger<-paste(definitionInTiger,'\n',"All the genes in `selectTigerGenes` are annotated as TS either for heart, kidney, liver or testis in TiGER.")
+  }else{
+    definitionInTiger<-paste(definitionInTiger,'\n', 
+                             "Some genes in `selectTigerGenes`are NOT annotated in TiGER as TS genes for any of the following tissues: heart, kidney, liver and testis.")
+  }
+```
+
+`r definitionInTiger`
+
+## Twenty-three 
+```{r tissue23Tiger}
+tissue23<-unique(c('heart','kidney','liver','testis','bladder','brain',
+                   'colon','uterus','lung','ovary','pancreas','prostate',
+                   'muscle','skin','small_intestine','spleen','stomach'))
+
+Tiger23Tissues<-allTigerNoDup[allTigerNoDup$tissue %in% tissue23,]
+
+DT::datatable(Tiger23Tissues,
+              rownames = FALSE,
+              colnames = c('Refseq', 'Ensembl (76)','Name','Tissue'),
+              options = list(dom='flrtip'))
+```
+
+```{r saveData, results='hold',eval=FALSE,echo=FALSE}
+saveToFile(smallerSubsetTigerMix,path="data")
+saveToFile(selectTigerGenes,path="data")
+saveToFile(Tiger4Tissues,path="data")
+saveToFile(Tiger23Tissues,path="data")
+```
+

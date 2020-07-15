@@ -1,0 +1,37 @@
+---
+title: 'Supplementaries for Chapter 6'
+author: "Mitra Barzine"
+date: "2020"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+    theme: united
+    highlight: pygments
+    smart: true
+    css: ../styles.css
+    includes:
+      after_body: ../footer.html
+---
+
+Availibility in progress  (11 July 2020) : The different reports have been generated, but many have still to be uploaded.
+
+[Report example (tissue)](tissues_htseq_ppkm/protRNAcomp_3DF_ens76_gene_level_rna_htseq_fpkm_expRnaCut0__protppkm_expProtCut0__proteinCodingOnly_noMitoch_pearson_log2_pseud1withNullval_tissue.html)
+
+- Tissue centric analyses:
+     * [RNA (htseq) x Protein (top3)](https://www.ebi.ac.uk/~mitra/thesis/chapter6/tissues_htseq_top3)
+     * [RNA (htseq) x Protein (ppkm)](https://www.ebi.ac.uk/~mitra/thesis/chapter6/tissues_htseq_ppkm)
+     * [RNA (cufflinks) x Protein (top3)](https://www.ebi.ac.uk/~mitra/thesis/chapter6/tissues_cufflinks_top3)
+     * [RNA (cufflinks) x Protein (ppkm)](https://www.ebi.ac.uk/~mitra/thesis/chapter6/tissues_cufflinks_ppkm)
+  
+- Gene centric analyses:
+    * [RNA (htseq) x Protein (top3)](https://www.ebi.ac.uk/~mitra/thesis/chapter6/genes_htseq_top3)
+    * [RNA (htseq) x Protein (ppkm)](https://www.ebi.ac.uk/~mitra/thesis/chapter6/genes_htseq_ppkm)
+    * [RNA (cufflinks) x Protein (top3)](https://www.ebi.ac.uk/~mitra/thesis/chapter6/genes_cufflinks_top3)
+    * [RNA (cufflinks) x Protein (ppkm)](https://www.ebi.ac.uk/~mitra/thesis/chapter6/genes_cufflinks_ppkm)
+
+
+

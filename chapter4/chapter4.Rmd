@@ -1,0 +1,60 @@
+---
+title: 'Supplementaries for Chapter 4'
+author: "Mitra Barzine"
+date: "May 2020"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+    theme: united
+    highlight: pygments
+    smart: true
+    css: ../styles.css
+    includes:
+      after_body: ../footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      dev = c("png"),
+                      dev.args = list(png = list(type = "cairo")))
+
+```
+
+```{r initalisation}
+suppressPackageStartupMessages(library(barzinePhdR))
+```
+
+# TiGER data preparation
+See [TiGER preparation steps](tigerExtraction.html)
+
+
+# Shared and unique tissues across the five transcriptomic datasets
+```{r echo=FALSE}
+castle<-eval(barzinePhdData::castle.htseq.fpkm)
+brawand<-eval(barzinePhdData::brawand.htseq.fpkm.pooled)
+ibm<-eval(barzinePhdData::ibm.htseq.fpkm)
+uhlen<-eval(barzinePhdData::uhlen.htseq.fpkm.pooled)
+gtex<-eval(barzinePhdData::gtex.htseq.fpkm.pooled)
+TissueCol<-eval(barzinePhdData::TissueCol_62)
+datasetCol<-eval(barzinePhdData::datasetCol)
+
+DrawVenn(a=castle,b=brawand,c=ibm,d=uhlen,e=gtex,
+         names=c('Castle','Brawand','IBM','Uhlén','GTEx'),
+         cols=datasetCol[c('Castle','Brawand','IBM','Uhlen','Gtex')],
+         type='colnames',
+         cat.cex=rep(1.5,5),
+         cat.pos=c(0,10,250,100,0),euler.d=FALSE,
+         cex=c(rep(1.6,14),rep(2.1,2),1.6,2.1,rep(1.6,8),2.1,rep(1.6,3),2.1),
+         fontface=c(rep('plain',14),rep('bold',2),'plain','bold',rep('plain',8),'bold',rep('plain',3),'bold'))
+
+```
+
+# Reports
+Reports for different set of paramaters can be found on the [EMBL-EBI website](https://www.ebi.ac.uk/~mitra/thesis/chapter4/reports/)
+
+[Example of reports for 5 datasets](https://www.ebi.ac.uk/~mitra/thesis/chapter4/reports/transcriptComp5DF_ens76_gene_level_htseq_fpkm_proteinCodingOnly_noMitoch_expCut0_pearson_log2.html)
+

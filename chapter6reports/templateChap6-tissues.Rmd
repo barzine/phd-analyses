@@ -1,0 +1,759 @@
+---
+author: "Mitra Barzine"
+date: "2020"
+output: 
+  html_document:
+    code_download: true
+    theme: united
+    highlight: pygments
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+    df_print: paged
+    css: ../styles.css
+    includes:
+      after_body: ../footer.html
+---
+---
+title: `r dynTitle`
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressPackageStartupMessages(library(barzinePhdR))
+flag4rChunks<-TRUE
+flag4rChunks2D<-TRUE
+flag4rChunks3D<-TRUE
+op <- par(family = "Linux Libertine")
+
+if(compDF=="3DF") flag4rChunks2D<-FALSE
+if(compDF=="2DF") flag4rChunks3D<-FALSE
+```
+
+Notes:
+
+* The analyses are built with [`barzinePhdR`](https://github.com/barzine/barzinePhdR), [`barzinePhdData`](https://github.com/barzine/barzinePhdData) packages and the additional packages: [`DT`](https://rstudio.github.io/DT/) and [`pander`](https://cran.r-project.org/web/packages/pander/index.html).  
+* This report has been generated with the help of [`invocation.R`](invocation.R) and a [template](templateChap6-tissues.Rmd).
+
+```{r otherFunctions}
+pDF<-function(x,caption,signifnum=2,pageLength=15){
+  DT::datatable( signif(x ,signifnum) ,
+                caption=caption,
+                extensions = c('Responsive','Buttons','ColReorder'),
+                options = list(pageLength = pageLength,
+                               dom='Blfrtip',
+                               buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print'),
+                               colReorder = list(realtime = FALSE)))
+}
+
+makeTitle<-function(label,quantM,expCutoff){
+  title<-label
+  if(expCutoff){
+    title<-paste(title,'( ≥',expCutoff)
+  }else{
+    title<-paste(title,'( > 0')
+  }
+  if(quantM=='top3'){
+    title<-paste(title,'PSM (TOP3))')
+  }else{
+    title<-paste(title,toupper(quantM),')')
+  }
+}
+
+geneID2df<-function(x,title){
+  DT::datatable(
+        data.frame(id=x,name=barzinePhdData::gene.mapID[x]),
+        rownames = FALSE, colnames = c('Ensembl id' = 'id','Gene name' = 'name'),
+        caption = title,
+        extensions = 'Buttons', 
+        options = list(
+          dom = 'Bfrtip',
+          buttons = c('copy', 'csv', 'excel', 'pdf', 'print') 
+      ))
+}
+
+ExpressedTissues=2
+lmat <- rbind( c(5,3,4), c(2,1,4) )
+lhei <- c(0.2, 4)
+lwid <- c(0.2, 4,0.1)
+```
+
+# Summary of applied parameters
+
+<table>
+<tbody>
+<tr>
+<td>
+* Ensembl version: `r ENSEMBL_VER`
+* Analysis conducted at `r analysis_level`
+* RNA: 
+   - quantification method: `r quantMethod`
+   - Normalisation method: `r toupper(normMethod)`
+* Protein: quantification method: <b> `r toupper(protQuant)`</b>
+* 
+```{r summaryProtGene, echo=FALSE, results='asis'}  
+if(proteinCodingOnly){
+  cat("Only 'protein coding' biotype kept")
+}else{
+  cat("All types of biotypes are kept")
+}
+```
+</td>
+<td>
+*
+```{r summaryMitoch,echo=FALSE, results='asis'}  
+if(removeMitoch){
+  cat("Mitochondria are REMOVED")
+}else{
+  cat("Mitochondria are kept")
+}
+```
+* Correlation method in use: `r simpleCap(corrMethod)`
+* 
+```{r summaryCutoff, echo=FALSE, results='asis'}  
+if(cutoff==0){
+  cat(paste("Analyses include genes for which the mRNA is observed above 0",toupper(normMethod)))
+}else{
+  if(cutoff>0){
+    cat(paste("Analyses include genes for which the mRNA is observed at least at",cutoff,toupper(normMethod)))
+  }else{
+    cat(paste("Invalid cutoff of expression"))
+    flag4rChunks<-FALSE
+    flag4rChunks2D<-FALSE
+    flag4rChunks3D<-FALSE
+  }
+}
+```
+* 
+```{r summaryCutoffprot, echo=FALSE, results='asis'}  
+if(cutoffprot==0){
+  cat(paste("Analyses include genes for which the protein is observed above 0"))
+}else{
+  if(cutoffprot>0){
+    cat(paste("Analyses include genes for which the protein is observed at least at",cutoffprot))
+  }else{
+    cat(paste("Invalid cutoff of expression"))
+    flag4rChunks<-FALSE
+    flag4rChunks2D<-FALSE
+    flag4rChunks3D<-FALSE
+  }
+}
+```
+* Log2-scalling applied to the data: `r log2scaling`
+*
+```{r summaryremoveNull, echo=FALSE, results='asis'}  
+if(remove0){
+  cat("Null values have been removed when possible")
+}else{
+  cat("Null values have been kept.")
+}
+```
+</td>
+</tr>
+</tbody>
+</table>
+
+```{r noData2analyse,echo=!flag4rChunks,eval=!flag4rChunks,results='asis'}
+cat("<h3 style='color: red; font-weight: bold;'>No result can be computed for the current combination of parameters.</h3>")
+```
+
+```{r loadDataHeaders,echo=flag4rChunks,eval=flag4rChunks,results='asis'}
+cat("\n# Data Preparation")
+```
+
+```{r loadData, echo=flag4rChunks,eval=flag4rChunks,results='asis'}
+DF1<-loadprotDF(labelDF1)
+if(!cutoffprot==0) DF1<-strip(DF1,'ge',cutoffprot)
+
+DF2<-loadRnaDF(labelDF2)
+if(!cutoff==0) DF2<-strip(DF2,'ge',cutoff)
+if(compDF=="3DF"){
+  DF3<-loadRnaDF(labelDF3)
+  if(!cutoff==0) DF3<-strip(DF3,'ge',cutoff)
+}
+
+if(proteinCodingOnly){
+  DF2<-strip(filtre.dataset(DF2,g.Pcoding))
+  if(compDF=="3DF")  DF3<-strip(filtre.dataset(DF3,g.Pcoding))
+} 
+
+if(log2scaling){
+  DF1<-log2(DF1+pseudocount)
+  DF2<-log2(DF2+pseudocount)
+  
+  if(compDF=="3DF") DF3<-log2(DF3+pseudocount)
+}
+
+```
+
+
+```{r dataPrepTHeaders,results='asis', echo=flag4rChunks,eval=flag4rChunks}
+cat("## Tissue filtering")
+```
+
+```{r dataPrepT, echo=flag4rChunks,eval=flag4rChunks,results='asis'}
+if(compDF=="3DF"){
+DrawVenn(fontfamily='Linux Libertine',
+         cat.fontfamily='Linux Libertine',
+     a=DF1,
+     b=DF2,
+     c=DF3,
+     names=nameDFs,
+     cols=datasetCol[nameDFs],
+     type='colnames',
+     cat.cex=rep(2,3),
+     cat.dist=c(0.08,0.07,0.07),
+     cex=rep(2,7),
+     euler.d=FALSE,
+     scaled=FALSE)
+}else{
+  if(compDF=="2DF"){
+     DrawVenn(fontfamily='Linux Libertine',
+              cat.fontfamily='Linux Libertine',
+     a=DF1,
+     b=DF2,
+     names=nameDFs,
+     cols=datasetCol[nameDFs],
+     type='colnames',
+     cat.cex=rep(2,2),
+     cat.dist=c(0.07,0.03),
+     cat.pos=c(330,45),
+     cex=rep(2,3)
+     )
+  }
+}
+
+
+if(compDF=="2DF"){
+    commonT<-Intersect(colnames(DF1),colnames(DF2))
+    DF1<-strip(DF1[,commonT])
+    DF2<-strip(DF2[,commonT])
+}
+
+if(compDF=="3DF"){
+  commonT<-Intersect(colnames(DF1),colnames(DF2),colnames(DF3))
+  DF1<-strip(DF1[,commonT])
+  DF2<-strip(DF2[,commonT])
+  DF3<-strip(DF3[,commonT])
+  }
+
+cat(paste('There are',length(commonT), 'common tissues between the datasets:'),commonT)
+```
+
+
+```{r dataPrepGHeaders,results='asis', echo=flag4rChunks,eval=flag4rChunks}
+cat("## Gene filtering")
+```
+
+```{r unmatchedProtQ1,results='asis', echo=flag4rChunks,eval=flag4rChunks}
+if(compDF=="3DF"){
+  DrawVenn(fontfamily='Linux Libertine',
+           cat.fontfamily='Linux Libertine',
+     a=DF1,
+     b=DF2,
+     c=DF3,
+     names=nameDFs,
+     cols=datasetCol[nameDFs],
+     type='rownames',
+     cat.cex=rep(2,3),
+     cat.dist=c(0.08,0.07,0.06),
+     cex=rep(2,7),
+     euler.d=FALSE,
+     scaled=FALSE)
+}else{
+  if(compDF=="2DF"){
+     DrawVenn(fontfamily='Linux Libertine',
+              cat.fontfamily='Linux Libertine',
+     a=DF1,
+     b=DF2,
+     names=nameDFs,
+     cols=datasetCol[nameDFs],
+     type='rownames',
+     cat.cex=rep(2,2),
+     cat.dist=c(0.07,0.03),
+     cat.pos=c(330,45),
+     cex=rep(2,3)
+     )
+  }
+}
+
+cat("\n### List of proteins not found as mRNAs\n")
+
+if(compDF=="3DF"){
+  unmatchedProt<-setdiff(rownames(DF1),union(rownames(DF2),rownames(DF3)))
+}else{
+  unmatchedProt<-setdiff(rownames(DF1),rownames(DF2))
+}
+
+geneID2df(unmatchedProt,title="Proteins unmatched by RNA (with the selected filters)")
+```
+
+```{r dataPrepG, echo=flag4rChunks,eval=flag4rChunks,results='asis'}
+if(compDF=="3DF"){
+  common.genes<-Intersect(rownames(DF1),rownames(DF2),rownames(DF3))
+  DF1<-DF1[common.genes,]
+  DF2<-DF2[common.genes,]
+  DF3<-DF3[common.genes,]
+}else{
+  if(compDF=="2DF"){
+    common.genes<-Intersect(rownames(DF1),rownames(DF2))
+    DF1<-DF1[common.genes,]
+    DF2<-DF2[common.genes,]
+  }
+}
+
+cat(paste('There are',length(common.genes), 'common genes between the datasets.\n'))
+
+if(removeMitoch) {
+  DF1<-excludeGenes(DF1,mitoch)
+  DF2<-excludeGenes(DF2,mitoch)
+  if(compDF=="3DF") DF3<-excludeGenes(DF3,mitoch)
+  
+  cat(paste('As mitochondrial genes have been removed, analyses includes',nrow(DF1),'genes.\n'))
+}
+nameInit<-nameDFs
+if(log2scaling){
+  if(pseudocount){
+    nameInit<-nameDFs
+    nameDFs<-sapply(nameDFs,function(x) paste0('log2(',x,'+',pseudocount,')'))
+    names(datasetCol)<-sapply(names(datasetCol),function(x) paste0('log2(',x,'+',pseudocount,')'))
+    
+    labelDF1<-paste0(labelDF1,'_log2_',pseudocount)
+    labelDF2<-paste0(labelDF2,'_log2_',pseudocount)
+    if(compDF=="3DF") labelDF3<-paste0(labelDF3,'_log2_',pseudocount)
+  }else{
+    nameInit<-nameDFs
+    nameDFs<-sapply(nameDFs,function(x) paste0('log2(',x,')'))
+    labelDF1<-paste0(labelDF1,'_log2')
+    labelDF2<-paste0(labelDF2,'_log2')
+    if(compDF=="3DF") labelDF3<-paste0(labelDF3,'_log2')
+  }
+}
+```
+
+
+# Tissue centric analyses
+
+```{r TissueCor2DF, echo=flag4rChunks2D,eval=flag4rChunks2D,results='asis',warning=FALSE,message=FALSE}
+cat("## Correlation \n")
+corrMatDF1DF2<-compute_tissue_corr_matrix(DF1,DF2,labelDF1,labelDF2,method= corrMethod,report=FALSE)
+cat("\n### Welch's t test\n")
+
+cortTestDF1DF2<-t_test.CorrMat_identical.vs.different(corrMatDF1DF2,
+                                                      labelDF1,labelDF2,
+                                                      report=FALSE,
+                                                      output='test')
+
+cat("\n### Table\n")
+
+pDF(corrMatDF1DF2,
+    caption=paste(simpleCap(corrMethod),"correlation between",nameDFs[1],'and',nameDFs[2]))
+
+cat("\n### Heatmap\n")
+cat("\n#### with clustering\n")
+
+heatmapWithClustering(corrMatDF1DF2,
+                      label.A=nameDFs[1],label.B=nameDFs[2],
+                      out.A=nameDFs[1], out.B=nameDFs[2],
+                      dend='both',
+                      margins=c(8,13),key.title=NA,key.xlab=paste(simpleCap(corrMethod),'correlation'),
+                      key.ylab=NA,family='Linux Libertine',srtCol=45)
+
+cat("\n#### ordered alphabetically \n")
+heatmapAlphabet(corrMatDF1DF2,
+                label.A=nameDFs[1],label.B=nameDFs[2],
+                out.A=nameDFs[1], out.B=nameDFs[2],
+                margins=c(9,10),key.title=NA,
+                key.xlab=paste(simpleCap(corrMethod),'correlation'),
+                key.ylab=NA,family='Linux Libertine',digits = 2,srtCol=45)
+```
+
+
+```{r TissueCor3DF, echo=flag4rChunks3D,eval=flag4rChunks3D,results='asis',warning=FALSE,message=FALSE}
+cat("## Correlation {.tabset} \n")
+
+cat(paste("### Between",nameDFs[1],'and',nameDFs[2],'\n'))
+
+corrMatDF1DF2<-compute_tissue_corr_matrix(DF1,DF2,labelDF1,labelDF2,method= corrMethod,report=FALSE)
+cat("\n#### Welch's t test\n")
+
+cortTestDF1DF2<-t_test.CorrMat_identical.vs.different(corrMatDF1DF2,
+                                                      labelDF1,labelDF2,
+                                                      report=FALSE,
+                                                      output='test')
+
+cat("\n#### Table\n")
+
+pDF(corrMatDF1DF2,
+    caption=paste(simpleCap(corrMethod),"correlation between",nameDFs[1],'and',nameDFs[2]))
+
+cat("\n#### Heatmap\n")
+cat("\n##### with clustering\n")
+
+heatmapWithClustering(corrMatDF1DF2,
+                      label.A=nameDFs[1],label.B=nameDFs[2],
+                      out.A=nameDFs[1], out.B=nameDFs[2],
+                      dend='both',
+                      margins=c(8,13),key.title=NA,key.xlab=paste(simpleCap(corrMethod),'correlation'),
+                      key.ylab=NA,family='Linux Libertine',srtCol=45)
+
+cat("\n#### ordered alphabetically \n")
+heatmapAlphabet(corrMatDF1DF2,
+                label.A=nameDFs[1],label.B=nameDFs[2],
+                out.A=nameDFs[1], out.B=nameDFs[2],
+                margins=c(9,10),key.title=NA,
+                key.xlab=paste(simpleCap(corrMethod),'correlation'),
+                key.ylab=NA,family='Linux Libertine',digits = 2,srtCol=45)
+
+cat(paste("### Between",nameDFs[1],'and',nameDFs[3],"\n"))
+
+corrMatDF1DF3<-compute_tissue_corr_matrix(DF1,DF3,labelDF1,labelDF3,method= corrMethod,report=FALSE)
+cat("\n#### Welch's t test\n")
+
+cortTestDF1DF3<-t_test.CorrMat_identical.vs.different(corrMatDF1DF3,
+                                                      labelDF1,labelDF3,
+                                                      report=FALSE,
+                                                      output='test')
+
+cat("\n#### Table\n")
+
+pDF(corrMatDF1DF3,
+    caption=paste(simpleCap(corrMethod),"correlation between",nameDFs[1],'and',nameDFs[3]))
+
+cat("\n#### Heatmap\n")
+cat("\n##### with clustering\n")
+
+heatmapWithClustering(corrMatDF1DF3,
+                      label.A=nameDFs[1],label.B=nameDFs[3],
+                      out.A=nameDFs[1], out.B=nameDFs[3],
+                      dend='both',
+                      margins=c(8,13),key.title=NA,key.xlab=paste(simpleCap(corrMethod),'correlation'),
+                      key.ylab=NA,family='Linux Libertine',srtCol=45)
+
+cat("\n#### ordered alphabetically \n")
+heatmapAlphabet(corrMatDF1DF3,
+                label.A=nameDFs[1],label.B=nameDFs[3],
+                out.A=nameDFs[1], out.B=nameDFs[3],
+                margins=c(9,10),key.title=NA,
+                key.xlab=paste(simpleCap(corrMethod),'correlation'),
+                key.ylab=NA,family='Linux Libertine',digits = 2,srtCol=45)
+
+
+cat(paste("### Between",nameDFs[2],'and',nameDFs[3],"\n"))
+
+corrMatDF2DF3<-compute_tissue_corr_matrix(DF2,DF3,labelDF2,labelDF3,method= corrMethod,report=FALSE)
+cat("\n#### Welch's t test\n")
+
+cortTestDF2DF3<-t_test.CorrMat_identical.vs.different(corrMatDF2DF3,
+                                                      labelDF2,labelDF3,
+                                                      report=FALSE,
+                                                      output='test')
+
+cat("\n#### Table\n")
+
+pDF(corrMatDF2DF3,
+    caption=paste(simpleCap(corrMethod),"correlation between",nameDFs[2],'and',nameDFs[3]))
+
+
+cat("\n#### Heatmap\n")
+cat("\n##### with clustering\n")
+
+heatmapWithClustering(corrMatDF2DF3,
+                      label.A=nameDFs[2],label.B=nameDFs[3],
+                      out.A=nameDFs[2], out.B=nameDFs[3],
+                      dend='both',
+                      margins=c(8,13),key.title=NA,key.xlab=paste(simpleCap(corrMethod),'correlation'),
+                      key.ylab=NA,family='Linux Libertine',srtCol=45)
+
+cat("\n#### ordered alphabetically \n")
+heatmapAlphabet(corrMatDF2DF3,
+                label.A=nameDFs[2],label.B=nameDFs[3],
+                out.A=nameDFs[2], out.B=nameDFs[3],
+                margins=c(9,10),key.title=NA,
+                key.xlab=paste(simpleCap(corrMethod),'correlation'),
+                key.ylab=NA,family='Linux Libertine',digits = 2,srtCol=45)
+
+```
+
+```{r TissueNbSpeGenes2DF, echo=flag4rChunks2D,eval=flag4rChunks2D,results='asis',warning=FALSE,message=FALSE}
+cat("\n## Expression breadth")
+breadth.DF1<-plotUniq.distrib(DF1,omit.zero=remove0,base_family='Linux Libertine')
+breadth.DF2<-plotUniq.distrib(DF2,omit.zero=remove0,base_family='Linux Libertine')
+
+title1<-makeTitle(nameInit[1],quantM=protQuant,cutoffprot)
+title2<-makeTitle(nameInit[2],quantM=normMethod,cutoff)
+
+print(breadth.DF1+ggtitle(title1)+theme_bw(base_size=16)+labs(y='protein count'))
+print(breadth.DF2+ggtitle(title2)+theme_bw(base_size=16)+labs(y='mRNA count'))
+
+```
+
+```{r TissueNbSpeGenesBar2DF, echo=flag4rChunks2D,eval=flag4rChunks2D}
+tryCatch(bibarplotsDiversityCond(DF1,DF2,
+                        label1=title1,
+                        threshold2=cutoff,label2=title2,
+                        colorpal=TissueCol,output = 'ratio',
+                        base_family='Linux Libertine'),
+         error = function(c){
+           c$message <- paste0('Not enough data to show')
+         })
+```
+
+
+```{r TissueNbSpeGenes3DF, echo=flag4rChunks3D,eval=flag4rChunks3D,results='asis',warning=FALSE,message=FALSE}
+cat("\n## Expression breadth")
+breadth.DF1<-plotUniq.distrib(DF1,omit.zero=remove0,base_family='Linux Libertine')
+breadth.DF2<-plotUniq.distrib(DF2,omit.zero=remove0,base_family='Linux Libertine')
+breadth.DF3<-plotUniq.distrib(DF3,omit.zero=remove0,base_family='Linux Libertine')
+
+title1<-makeTitle(nameInit[1],quantM=protQuant,cutoffprot)
+title2<-makeTitle(nameInit[2],quantM=normMethod,cutoff)
+title3<-makeTitle(nameInit[3],quantM=normMethod,cutoff)
+
+print(breadth.DF1+ggtitle(title1)+theme_bw(base_size=16)+labs(y='protein count'))
+print(breadth.DF2+ggtitle(title2)+theme_bw(base_size=16)+labs(y='mRNA count'))
+print(breadth.DF3+ggtitle(title3)+theme_bw(base_size=16)+labs(y='mRNA count'))
+```
+
+```{r TissueNbSpeGenesBar3DF, echo=flag4rChunks3D,eval=flag4rChunks3D}
+tryCatch(bibarplotsDiversityCond(DF1,DF2,
+                        label1=title1,
+                        threshold2=cutoff,label2=title2,
+                        colorpal=TissueCol,output = 'ratio',
+                        base_family='Linux Libertine'),
+         error = function(c){
+           c$message <- paste0('Not enough data to show')
+         })
+
+tryCatch(bibarplotsDiversityCond(DF1,DF3,
+                        label1=title1,
+                        threshold2=cutoff,label2=title3,
+                        colorpal=TissueCol,output = 'ratio',
+                        base_family='Linux Libertine'),
+         error = function(c){
+        c$message <- paste0('Not enough data to show')
+         })
+
+```
+
+
+```{r TissueSharedExpBreadth2DF, echo=flag4rChunks2D,eval=flag4rChunks2D}
+cat("\n## Shared expression breadth")
+
+tryCatch(List[sharedEB_DF1DF2_DF1,sharedEB_DF1DF2_DF2,plotsharedEB_DF1DF2] <-cross.sharedDistrib(DF1,DF2,Lims=c(1,3,10,12)),
+         error = function(c){
+        c$message <- paste0('Not enough data to show')
+         })
+```
+
+
+
+```{r TissueSharedExpBreadth3DF, echo=flag4rChunks3D,eval=flag4rChunks3D}
+cat("\n### Shared expression breadth")
+
+tryCatch(List[sharedEB_DF1DF2_DF1,sharedEB_DF1DF2_DF2,plotsharedEB_DF1DF2] <-cross.sharedDistrib(DF1,DF2,Lims=c(1,3,10,12)),
+         error = function(c){
+        c$message <- paste0('Not enough data to show')
+         })
+
+tryCatch(List[sharedEB_DF1DF3_DF1,sharedEB_DF1DF3_DF3,plotsharedEB_DF1DF3] <-cross.sharedDistrib(DF1,DF3,Lims=c(1,3,10,12)),
+         error = function(c){
+        c$message <- paste0('Not enough data to show')
+         })
+```
+
+```{r TissueTS2DF, echo=flag4rChunks2D,eval=flag4rChunks2D, results='asis',warning=FALSE,message=FALSE}
+cat("## Tissue specific genes: TS proteins and TS mRNAs (fold change method) \n")
+
+overRatio.DF1DF2<-overlapSpeProtmRNA(DFprot=DF1,DFmRNA = DF2,pvalue = FALSE)
+overRatioPval.DF1DF2<-overlapSpeProtmRNA(DFprot=DF1,DFmRNA = DF2,pvalue = TRUE)
+
+heatmapAlphabet(t(overRatio.DF1DF2),
+                label.A=title1,
+                label.B=title2,
+                margins=c(7,7),
+                report=FALSE,key=FALSE,
+                digits=2,cex.axis=5,
+                annot='complete',sorting=FALSE,
+                family='Linux Libertine',notecol="black",
+                lmat=lmat,lhei=lhei,lwid=lwid,
+                mathMethod = 'round')
+
+heatmapAlphabet(t(overRatioPval.DF1DF2),
+                label.A=title1,
+                label.B=title2,
+                margins=c(7,7),
+                report=FALSE,key=FALSE,
+                digits=2,cex.axis=5,
+                annot='complete',sorting=FALSE,
+                family='Linux Libertine',notecol="black",
+                lmat=lmat,lhei=lhei,lwid=lwid,
+                mathMethod = 'signif')
+
+
+reportTmp<-t_test.Mat_identical.vs.different(overRatio.DF1DF2,xLab='Type',yLab='Jaccard Ind.',showMean=FALSE,pval=FALSE)
+pander::pander(reportTmp)
+reportTmp<-t_test.Mat_identical.vs.different(overRatioPval.DF1DF2,xLab='Type',yLab='p-values',showMean=FALSE,pval=FALSE)
+pander::pander(reportTmp)
+
+tmp<-lapply(setNames(commonT,commonT),
+             function(x){
+             cat(knitr::knit_print(geneID2df(overlapSpeProtmRNA(DFprot=DF1,
+                         DFmRNA = DF2,
+                         complete.matrix = FALSE,
+                         pvalue = FALSE,
+                         ratio=1,
+                         xprot=x,
+                         figure=TRUE,
+                   categories=nameInit[1:2],outputType="intersect"),
+                   paste("TS genes confirmed by",title1,"and",title2,"for",x))
+             ))})
+```
+
+```{r TissueTS3DF, echo=flag4rChunks3D,eval=flag4rChunks3D, results='asis',warning=FALSE,message=FALSE}
+cat("## Tissue specific genes: TS proteins and TS mRNAs (fold change method)\n")
+
+cat(paste("\n### Between ",nameInit[1],"and",nameInit[2]))
+overRatio.DF1DF2<-overlapSpeProtmRNA(DFprot=DF1,DFmRNA = DF2,pvalue = FALSE)
+overRatioPval.DF1DF2<-overlapSpeProtmRNA(DFprot=DF1,DFmRNA = DF2,pvalue = TRUE)
+
+heatmapAlphabet(t(overRatio.DF1DF2),
+                label.A=title1,
+                label.B=title2,
+                margins=c(7,7),
+                report=FALSE,key=FALSE,
+                digits=2,cex.axis=5,
+                annot='complete',sorting=FALSE,
+                family='Linux Libertine',notecol="black",
+                lmat=lmat,lhei=lhei,lwid=lwid,
+                mathMethod = 'round')
+
+heatmapAlphabet(t(overRatioPval.DF1DF2),
+                label.A=title1,
+                label.B=title2,
+                margins=c(7,7),
+                report=FALSE,key=FALSE,
+                digits=2,cex.axis=5,
+                annot='complete',sorting=FALSE,
+                family='Linux Libertine',notecol="black",
+                lmat=lmat,lhei=lhei,lwid=lwid,
+                mathMethod = 'signif')
+
+
+reportTmp<-t_test.Mat_identical.vs.different(overRatio.DF1DF2,xLab='Type',yLab='Jaccard Ind.',showMean=FALSE,pval=FALSE)
+pander::pander(reportTmp)
+reportTmp<-t_test.Mat_identical.vs.different(overRatioPval.DF1DF2,xLab='Type',yLab='p-values',showMean=FALSE,pval=FALSE)
+pander::pander(reportTmp)
+
+tmp<-lapply(setNames(commonT,commonT),
+             function(x){
+             cat(knitr::knit_print(geneID2df(overlapSpeProtmRNA(DFprot=DF1,
+                         DFmRNA = DF2,
+                         complete.matrix = FALSE,
+                         pvalue = FALSE,
+                         ratio=1,
+                         xprot=x,
+                         figure=TRUE,
+                   categories=nameInit[1:2],outputType="intersect"),
+                   paste("TS genes confirmed by",title1,"and",title2,"for",x))
+             ))})
+
+cat(paste("### Between ",nameInit[1],"and",nameInit[3]))
+overRatio.DF1DF3<-overlapSpeProtmRNA(DFprot=DF1,DFmRNA = DF3,pvalue = FALSE)
+overRatioPval.DF1DF3<-overlapSpeProtmRNA(DFprot=DF1,DFmRNA = DF3,pvalue = TRUE)
+
+heatmapAlphabet(t(overRatio.DF1DF3),
+                label.A=title1,
+                label.B=title3,
+                margins=c(7,7),
+                report=FALSE,key=FALSE,
+                digits=2,cex.axis=5,
+                annot='complete',sorting=FALSE,
+                family='Linux Libertine',notecol="black",
+                lmat=lmat,lhei=lhei,lwid=lwid,
+                mathMethod = 'round')
+
+heatmapAlphabet(t(overRatioPval.DF1DF3),
+                label.A=title1,
+                label.B=title3,
+                margins=c(7,7),
+                report=FALSE,key=FALSE,
+                digits=2,cex.axis=5,
+                annot='complete',sorting=FALSE,
+                family='Linux Libertine',notecol="black",
+                lmat=lmat,lhei=lhei,lwid=lwid,
+                mathMethod = 'signif')
+
+
+
+reportTmp<-t_test.Mat_identical.vs.different(overRatio.DF1DF3,xLab='Type',yLab='Jaccard Ind.',showMean=FALSE,pval=FALSE)
+pander::pander(reportTmp)
+reportTmp<-t_test.Mat_identical.vs.different(overRatioPval.DF1DF3,xLab='Type',yLab='p-values',showMean=FALSE,pval=FALSE)
+pander::pander(reportTmp)
+
+
+tmp<-lapply(setNames(commonT,commonT),
+             function(x){
+             cat(knitr::knit_print(geneID2df(overlapSpeProtmRNA(DFprot=DF1,
+                         DFmRNA = DF3,
+                         complete.matrix = FALSE,
+                         pvalue = FALSE,
+                         ratio=1,
+                         xprot=x,
+                         figure=TRUE,
+                   categories=nameInit[1:2],outputType="intersect"),
+                   paste("TS genes confirmed by",title1,"and",title3,"for",x))
+             ))})
+```
+
+## Trees 
+
+Note: ExpressedTissues = `r ExpressedTissues`
+
+```{r TissueTree2DF, echo=flag4rChunks2D,eval=flag4rChunks2D, results='asis',warning=FALSE,message=FALSE}
+DF1.Bool<-computeBreadth(DF1, threshold=cutoffprot,omit.zero=TRUE,typeR='dfBool')
+DF1.TM<-tissuesDistance(DF1.Bool,nbOfTissues=ExpressedTissues,plot=TRUE,method='ward.D')
+plot(extractDendroTissueDistance(DF1.TM,plot=FALSE),'cladogram')
+
+DF2.Bool<-computeBreadth(DF2, threshold=cutoffprot,omit.zero=TRUE,typeR='dfBool')
+DF2.TM<-tissuesDistance(DF2.Bool,nbOfTissues=ExpressedTissues,plot=TRUE,method='ward.D') 
+plot(extractDendroTissueDistance(DF2.TM,plot=FALSE),'cladogram')
+
+
+consensus2D<-ape::consensus(list(extractDendroTissueDistance(DF1.TM,plot=FALSE),
+                            extractDendroTissueDistance(DF2.TM,plot=FALSE)))
+plot(consensus2D,'cladogram')
+```
+
+
+```{r TissueTree3DF, echo=flag4rChunks3D,eval=flag4rChunks3D, results='asis',warning=FALSE,message=FALSE}
+DF1.Bool<-computeBreadth(DF1, threshold=cutoffprot,omit.zero=TRUE,typeR='dfBool')
+DF1.TM<-tissuesDistance(DF1.Bool,nbOfTissues=ExpressedTissues,plot=TRUE,method='ward.D')
+plot(extractDendroTissueDistance(DF1.TM,plot=FALSE),'cladogram')
+
+DF2.Bool<-computeBreadth(DF2, threshold=cutoffprot,omit.zero=TRUE,typeR='dfBool')
+DF2.TM<-tissuesDistance(DF2.Bool,nbOfTissues=ExpressedTissues,plot=TRUE,method='ward.D')  
+ plot(extractDendroTissueDistance(DF2.TM,plot=FALSE),'cladogram')
+           
+DF3.Bool<-computeBreadth(DF3, threshold=cutoffprot,omit.zero=TRUE,typeR='dfBool')
+DF3.TM<-tissuesDistance(DF3.Bool,nbOfTissues=ExpressedTissues,plot=TRUE,method='ward.D')
+plot(extractDendroTissueDistance(DF3.TM,plot=FALSE),'cladogram')
+
+consensus2D_DF2<-ape::consensus(list(extractDendroTissueDistance(DF1.TM,plot=FALSE),
+                            extractDendroTissueDistance(DF2.TM,plot=FALSE)))
+plot(consensus2D_DF2,'cladogram')
+
+
+consensus2D_DF3<-ape::consensus(list(extractDendroTissueDistance(DF1.TM,plot=FALSE),
+                            extractDendroTissueDistance(DF3.TM,plot=FALSE)))
+plot(consensus2D_DF3,'cladogram')
+
+consensus3D<-ape::consensus(list(extractDendroTissueDistance(DF1.TM,plot=FALSE),
+                            extractDendroTissueDistance(DF2.TM,plot=FALSE),
+                            extractDendroTissueDistance(DF3.TM,plot=FALSE)))
+plot(consensus3D,'cladogram')
+```
+

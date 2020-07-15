@@ -1,0 +1,57 @@
+---
+title: "Ascombe’s quartet"
+author: "Mitra Barzine"
+output: 
+  html_document:
+    lib_dir: libs
+    code_download: true
+    theme: united
+    highlight: pygments
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+    df_print: paged
+    css: ../styles.css
+    includes:
+      after_body: ../footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r createdataframe}
+x1 <- data.frame(x = anscombe[["x1"]], y = anscombe[["y1"]], Set = "Anscombe Set 1")
+x2 <- data.frame(x = anscombe[["x2"]], y = anscombe[["y2"]], Set = "Anscombe Set 2")
+x3 <- data.frame(x = anscombe[["x3"]], y = anscombe[["y3"]], Set = "Anscombe Set 3")
+x4 <- data.frame(x = anscombe[["x4"]], y = anscombe[["y4"]], Set = "Anscombe Set 4")
+
+anscombe4sets <- rbind(x1, x2, x3, x4)
+```
+
+# Mean for each dataset
+```{r meandata}
+pander::pander(aggregate(cbind(x, y) ~ Set, anscombe4sets, mean))
+```
+
+# Standard deviation for each dataset
+```{r standardDeviationdata}
+pander::pander(aggregate(cbind(x, y) ~ Set, anscombe4sets, sd))
+```
+
+# Data visualisation for each dataset
+
+```{r createPlot}
+library(ggplot2)
+p <- ggplot(anscombe4sets, aes(x = x, y = y)) + geom_point(color = "black")
+p <- p + facet_wrap(~Set, ncol = 2)
+p <- p + geom_smooth(data = anscombe4sets, method = "lm", formula = y ~ x, se = FALSE)
+p <- p + theme_bw()
+ggsave(filename='AnscombePan.png',width=4,height=3)
+
+p
+```
+
+

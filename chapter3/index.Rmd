@@ -14,6 +14,8 @@ output:
       after_body: ../footer.html
 ---
 
+[Anscombe's quartet](anscombeQuartet.html)
+
 All the different analyses presented in the chapter 3 of the thesis are going to be available through an [app](http://barzine.net/shiny/mitra/thesis/chapter3/).
 
 [Please see the app](http://barzine.net/shiny/mitra/thesis/chapter3/)
