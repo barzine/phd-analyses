@@ -1,0 +1,28 @@
+---
+title: "Investigating Normal Human Gene Expression in Tissues with High-throughput Transcriptomic and Proteomic Data."
+author: "Mitra Barzine"
+output: 
+  html_document:
+    includes:
+      after_body: footer.html
+    theme: united
+    highlight: pygments
+    smart: true
+    css: styles.css
+---
+
+ 
+
+# Thesis 
+- [pdf](thesis.pdf) 
+- [<i class="fa fa-github"></i> xelatex code](https://github.com/barzine/thesis)
+- [Mirror website (on EMBL-EBI website)](https://www.ebi.ac.uk/~mitra/thesis)
+
+# Supplementary figures and tables
+(divided by chapter)
+[chapter 2](chapter2/) --- [chapter 3](chapter3/) --- [chapter 4](chapter4/) --- [chapter 5](chapter5/) --- [chapter 6](chapter6/)
+
+# R packages
+- [barzinePhdR](https://github.com/barzine/barzinePhdR) [![Travis Build Status](https://travis-ci.com/barzine/barzinePhdR.svg?branch=master)](https://travis-ci.com/barzine/barzinePhdR)[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/barzine/barzinePhdR?branch=master&svg=true)](https://ci.appveyor.com/project/barzine/barzinePhdR): comprises all the functions used for the different analyses.
+- [barzinePhdData](https://github.com/barzine/barzinePhdData) [![Travis Build Status](https://travis-ci.com/barzine/barzinePhdData.svg?branch=master)](https://travis-ci.com/barzine/barzinePhdData)[![Build status](https://ci.appveyor.com/api/projects/status/08u1g2e4jhlw3i9h?svg=true)](https://ci.appveyor.com/project/barzine/barzinephddata): some of the data used in the thesis
+
