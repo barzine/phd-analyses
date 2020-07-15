@@ -5,13 +5,13 @@ output:
   html_document:
     self_contained: false
     lib_dir: libs
-    code_download: true
     theme: united
     highlight: pygments
     toc: true
     toc_depth: 2
     toc_float: true
     code_folding: hide
+    code_download: true
     number_sections: true
     df_print: paged
     css: ../styles.css

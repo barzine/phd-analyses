@@ -8,6 +8,7 @@ output:
     toc_depth: 3
     toc_float: true
     code_folding: hide
+    code_download: true
     number_sections: true
     theme: united
     highlight: pygments
