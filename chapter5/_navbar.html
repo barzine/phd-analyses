@@ -1,0 +1,41 @@
+<!-- Add icon library -->
+<script>
+  function goBack(){
+    window.history.back();
+  }
+
+  function goForward(){
+    window.history.forward();
+  }
+</script>
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <!-- NOTE: add "navbar-inverse" class for an alternate navbar background -->
+  <!--    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+  -->
+      <a class="navbar-brand" href="../index.html">PhD thesis' suppl.</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="../chapter2/">Chapter 2</a></li>
+        <li><a href="../chapter3/">Chapter 3</a></li>
+        <li><a href="../chapter4/">Chapter 4</a></li>
+        <li><a href="../chapter5/">Chapter 5</a></li>
+        <li><a href="../chapter6/">Chapter 6</a></li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="#" onclick="goBack()">Go back</a></li>
+        <li><a href="#" onclick="goForward()">Go forward</a></li>
+        <li><a href="../thesis.pdf"><i class="fa fa-download"></i>pdf</a></li>
+        <li><a href="https://github.com/barzine/phd-analyses"><i class="fa fa-github"></i>GitHub</a></li>
+      </ul>
+    </div><!--/.nav-collapse -->
+
+  </div><!--/.container -->
+</div><!--/.navbar -->

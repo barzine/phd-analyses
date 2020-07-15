@@ -1,0 +1,950 @@
+---
+title: 'Supplementaries for Chapter 5'
+author: "Mitra Barzine"
+date: "2020"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+    theme: united
+    highlight: pygments
+    smart: true
+    css: ../styles.css
+    includes:
+      after_body: ../footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r initalisation}
+suppressPackageStartupMessages(library(barzinePhdR))
+Pastelpalette7 <- c("#e6b7bf","#98d4e4","#ddbea5","#aec1e0","#d3e2bc","#d1bbdf","#a8cfbf")
+Intensepalette7<-c("#a10096","#ffb853","#014695","#f4003d","#02c3be","#493100","#ffaec2")
+revPastelpalette7 <- c("#a8cfbf","#e6b7bf","#98d4e4","#ddbea5","#aec1e0","#d3e2bc","#d1bbdf")
+otherPal7<-c("#F9DFC5","#D46658","#EBC4C0","#a8cfbf","#e6b7bf","#98d4e4","#DF3534")
+otherPal7<-c(alpha("tomato3",0.7),alpha("tan1",0.7),alpha("coral4",0.7),"#72AB59","#6460B8","#CC6AB7","#993366")
+```
+
+# An overall fragmented and disparate universe to explore
+
+## Shared and unique tissues across the three proteomic datasets {.tabset}
+### Venn diagram 
+```{r DistribShareUniqueTissueProt}
+cutler.top3<-eval(barzinePhdData::cutler.top3)
+kuster.top3<-eval(barzinePhdData::kuster.top3)
+pandey.top3<-eval(barzinePhdData::pandey.top3)
+TissueCol<-eval(barzinePhdData::TissueCol_62)
+datasetCol<-eval(barzinePhdData::datasetCol)
+
+DrawVenn(a=cutler.top3,b=kuster.top3,c=pandey.top3,
+         names=c('Cutler','Kuster','Pandey'),
+         cols=datasetCol[c('Cutler','Kuster','Pandey')],
+         type='colnames',
+         cat.cex=rep(2,3),
+         cat.dist=c(0.07,0.07,0.09),
+         cex=rep(2,7))
+```
+
+
+### UpsteR plot
+```{r }
+InputList3ProtDF<-list(Cutler=colnames(cutler.top3),Kuster=colnames(kuster.top3),
+                Pandey=colnames(pandey.top3))
+UpSetR::upset(UpSetR::fromList(InputList3ProtDF),order.by='degree',
+      sets.x.label = "Tissues number per Study",
+      point.size = 3, line.size = 2, 
+      text.scale = c(1.1, 0.95, 1.15, 1, 1.6, 0.90),
+      mb.ratio = c(0.60, 0.40)
+      )
+```
+
+
+## Overlap of proteins across the commun tissues {.tabset}
+
+```{r commonTissues}
+commonT<-Intersect(colnames(cutler.top3),colnames(kuster.top3),colnames(pandey.top3))
+cutler.top3.commonT<-strip(cutler.top3[,commonT])
+kuster.top3.commonT<-strip(kuster.top3[,commonT])
+pandey.top3.commonT<-strip(pandey.top3[,commonT])
+```
+
+### Venn diagram
+```{r vennDiagCommonTissue}
+DrawVenn(fontfamily='Linux Libertine',
+     a=cutler.top3.commonT,
+     b=kuster.top3.commonT,
+     c=pandey.top3.commonT,
+     names=names(datasetCol[6:8]),
+     cols=datasetCol[6:8],
+     type='rownames',
+     cat.cex=rep(2,3),
+     cat.dist=c(0.07,0.07,0.05),
+     cex=rep(2,7))
+```
+
+### UpsetR plot
+```{r overlapUpsPrtop3.commonTT}
+InputList3ProtDFCommProt<-list(Cutler=rownames(cutler.top3.commonT),
+                 Kuster=rownames(kuster.top3.commonT),
+                Pandey=rownames(pandey.top3.commonT))
+UpSetR::upset(UpSetR::fromList(InputList3ProtDFCommProt),order.by='degree',
+      sets.x.label = "Protein number for \n the four shared tissue per study",
+      point.size = 3, line.size = 2, 
+      text.scale = c(1.1, 0.95, 1.15, 1, 1.6, 0.90),
+      mb.ratio = c(0.60, 0.40)
+      )
+```
+
+
+## Breakdown by tissue {.tabset}
+
+### Heart {.tabset}
+#### UpsetR plot
+```{r overlapProtHeart}
+InputListHeart<-list(Cutler=rownames(cutler.top3.commonT[cutler.top3.commonT$Heart>0,]),
+                 Kuster=rownames(kuster.top3.commonT[kuster.top3.commonT$Heart>0,]),
+                 Pandey=rownames(pandey.top3.commonT[pandey.top3.commonT$Heart>0,]))
+
+UpSetR::upset(UpSetR::fromList(InputListHeart),order.by='degree',
+      sets.x.label = "Protein number identified for\nHeart in each study",
+      point.size = 3, line.size = 2, 
+      text.scale = c(1.1, 0.95, 1.15, 1, 1.6, 0.90),
+      mb.ratio = c(0.60, 0.40)
+      )
+```
+
+#### Venn diagram
+```{r overlapVenProtHeart}
+DrawVenn(fontfamily='Linux Libertine',
+     a=rownames(cutler.top3.commonT[cutler.top3.commonT$Heart>0,]),
+     b=rownames(kuster.top3.commonT[kuster.top3.commonT$Heart>0,]),
+     c=rownames(pandey.top3.commonT[pandey.top3.commonT$Heart>0,]),
+     names=names(datasetCol[6:8]),
+     cols=datasetCol[6:8],
+     type='vec',
+     cat.cex=rep(2,3),
+     cat.dist=c(0.07,0.07,0.05),
+     cex=rep(2,7))
+```
+
+
+### Lung {.tabset}
+#### UpsetR plot
+```{r overlapProtLung}
+InputListLung<-list(Cutler=rownames(cutler.top3.commonT[cutler.top3.commonT$Lung>0,]),
+                 Kuster=rownames(kuster.top3.commonT[kuster.top3.commonT$Lung>0,]),
+                 Pandey=rownames(pandey.top3.commonT[pandey.top3.commonT$Lung>0,]))
+
+
+UpSetR::upset(UpSetR::fromList(InputListLung),order.by='degree',
+      sets.x.label = "Protein number identified for\nLung in each study",
+      point.size = 3, line.size = 2, 
+      text.scale = c(1.1, 0.95, 1.15, 1, 1.6, 0.90),
+      mb.ratio = c(0.60, 0.40)
+      )
+
+```
+
+#### Venn diagram
+```{r overlapVenProtLung}
+DrawVenn(fontfamily='Linux Libertine',
+     a=rownames(cutler.top3.commonT[cutler.top3.commonT$Lung>0,]),
+     b=rownames(kuster.top3.commonT[kuster.top3.commonT$Lung>0,]),
+     c=rownames(pandey.top3.commonT[pandey.top3.commonT$Lung>0,]),
+     names=names(datasetCol[6:8]),
+     cols=datasetCol[6:8],
+     type='vec',
+     cat.cex=rep(2,3),
+     cat.dist=c(0.07,0.07,0.05),
+     cex=rep(2,7))
+```
+
+### Ovary {.tabset}
+#### UpsetR plot
+```{r overlapProtOvary}
+InputListOvary<-list(Cutler=rownames(cutler.top3.commonT[cutler.top3.commonT$Ovary>0,]),
+                 Kuster=rownames(kuster.top3.commonT[kuster.top3.commonT$Ovary>0,]),
+                 Pandey=rownames(pandey.top3.commonT[pandey.top3.commonT$Ovary>0,]))
+
+UpSetR::upset(UpSetR::fromList(InputListOvary),order.by='degree',
+      sets.x.label = "Protein number identified for\nOvary in each study",
+      point.size = 3, line.size = 2, 
+      text.scale = c(1.1, 0.95, 1.15, 1, 1.6, 0.90),
+      mb.ratio = c(0.60, 0.40)
+      )
+```
+
+#### Venn diagram
+```{r overlapVenProtOvary}
+DrawVenn(fontfamily='Linux Libertine',
+     a=rownames(cutler.top3.commonT[cutler.top3.commonT$Ovary>0,]),
+     b=rownames(kuster.top3.commonT[kuster.top3.commonT$Ovary>0,]),
+     c=rownames(pandey.top3.commonT[pandey.top3.commonT$Ovary>0,]),
+     names=names(datasetCol[6:8]),
+     cols=datasetCol[6:8],
+     type='vec',
+     cat.cex=rep(2,3),
+     cat.dist=c(0.07,0.07,0.05),
+     cex=rep(2,7))
+```
+
+
+### Pancreas {.tabset}
+#### UpsetR plot
+```{r overlapProtPancreas}
+InputListPancreas<-list(Cutler=rownames(cutler.top3.commonT[cutler.top3.commonT$Pancreas>0,]),
+                 Kuster=rownames(kuster.top3.commonT[kuster.top3.commonT$Pancreas>0,]),
+                 Pandey=rownames(pandey.top3.commonT[pandey.top3.commonT$Pancreas>0,]))
+
+UpSetR::upset(UpSetR::fromList(InputListPancreas),order.by='degree',
+      sets.x.label = "Protein number identified for\nPancreas in each study",
+      point.size = 3, line.size = 2, 
+      text.scale = c(1.1, 0.95, 1.15, 1, 1.6, 0.90),
+      mb.ratio = c(0.60, 0.40)
+      )
+```
+
+#### Venn diagram
+```{r overlapVenProtPancreas}
+DrawVenn(fontfamily='Linux Libertine',
+     a=rownames(cutler.top3.commonT[cutler.top3.commonT$Pancreas>0,]),
+     b=rownames(kuster.top3.commonT[kuster.top3.commonT$Pancreas>0,]),
+     c=rownames(pandey.top3.commonT[pandey.top3.commonT$Pancreas>0,]),
+     names=names(datasetCol[6:8]),
+     cols=datasetCol[6:8],
+     type='vec',
+     cat.cex=rep(2,3),
+     cat.dist=c(0.07,0.07,0.05),
+     cex=rep(2,7))
+```
+
+
+## For information: comparison Kuster and Pandey only {.tabset}
+### Tissue
+```{r TissueOverlapProtKusterPandey}
+DrawVenn(fontfamily='Linux Libertine',
+     a=kuster.top3,
+     b=pandey.top3,
+     names=names(datasetCol[7:8]),
+     cols=datasetCol[7:8],
+     type='colnames',
+     cat.cex=rep(2,2),
+     cat.dist=c(-0.05,-0.05),
+     cex=rep(2,3))
+```
+
+### Number of proteins for the commun tissues
+```{r common14T}
+comProt.14T<-intersect(colnames(kuster.top3),colnames(pandey.top3))
+kuster.oT14<-strip(kuster.top3[,comProt.14T])
+pandey.oT14<-strip(pandey.top3[,comProt.14T])
+```
+
+```{r overlapProt14T2D}
+DrawVenn(fontfamily='Linux Libertine',
+     a=kuster.oT14,
+     b=pandey.oT14,
+     names=names(datasetCol[7:8]),
+     cols=datasetCol[7:8],
+     type='rownames',
+     cat.cex=rep(2,2),
+     cex=rep(1.8,3))
+```
+
+### Breakdown for the other 10 tissues {.tabset}
+```{r Venndiag14T_helper}
+extractTissue<-function(DF,tissue,threshold=0,type='gt'){
+  toReturn<-setNames(DF[,tissue],rownames(DF))
+  switch(type,
+         'gt'={toReturn<-toReturn[toReturn>threshold]},
+         'ge'={toReturn<-toReturn[toReturn%>=%threshold]},
+         'eq'={toReturn<-toReturn[toReturn==threshold]},
+         'lt'={toReturn<-toReturn[toReturn<threshold]},
+         'le'={toReturn<-toReturn[toReturn%<=%threshold]}
+  )
+  return(toReturn)
+}
+```
+
+```{r results='asis'}
+tmp<-lapply(setdiff(comProt.14T,commonT),function(x){
+  cat(paste('#####',x,'\n'))
+  
+  DrawVenn(fontfamily='Linux Libertine',
+             a=extractTissue(kuster.top3,x),
+             b=extractTissue(pandey.top3,x),
+             names=names(datasetCol[7:8]),
+             cols=datasetCol[7:8],
+             type='namedV',
+             cat.cex=rep(2,2),
+             cat.dist=c(-0.01,-0.01),
+             cex=rep(1.8,3))
+  cat("\n\n\n")
+  
+})
+```
+
+# MS proteomic data has high detection variability
+## Number of identified proteins in each of the four common tissues for the three proteomic data. {.tabset}
+
+Proteins found in more than one dataset are most likely true (in red, light and darker green or purple — the most validated ones in red as they are found in all three datasets).
+
+### Figure
+```{r barplotProt4T, fig.height=4, fig.width=9.5}
+protTable<-barplotCommonGenesUnique3D(cutler.top3,
+                                    kuster.top3,
+                                    pandey.top3,
+                                    name=c('Cutler','Kuster','Pandey'),
+                                    out='DF',
+                                    colorpalette = otherPal7,
+                                    ylab='Protein count',
+                                    baseSize = 18, baseFamily = 'Linux Libertine')
+```
+
+### Table
+```{r barplotData}
+protTable$Name<-barzinePhdData::gene.mapID[protTable$ID]
+DT::datatable(protTable,rownames = FALSE,
+              caption = "Proteins observed in the four common tissues of Cutler, Kuster and Pandey",
+              extensions = 'Buttons', 
+              options = list(
+                dom = 'Bfrtip',
+                buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                ))
+```
+
+## Distribution of the proteins per tissue across the three datasets
+```{r ProteinsPerTissuePerdataset, fig.width=5.5, fig.height=3.5, results="asis"}
+cat('### Cutler')
+tmp1<-nbGenesPerCond.unique(cutler.top3, 
+                          legend.title = 'Proteins within\ntissue/cell',
+                          ylab= "Number of proteins",
+                          Y=c(0,6100),
+                          legendPosition='bottom',
+                          print=FALSE,
+                          out='plot',
+                          thm=theme(axis.title.x=element_blank()))+ggtitle("Cutler")
+cat('### Kuster')
+tmp2<-nbGenesPerCond.unique(kuster.top3, 
+                          legend.title = 'Proteins within\ntissue/cell',
+                          ylab= "Number of proteins",
+                          Y=c(0,6100),
+                          legendPosition='bottom',
+                          print=FALSE,
+                          out='plot',
+                          thm=theme(axis.title.x=element_blank()))+ggtitle("Kuster")
+
+cat('### Pandey')
+tmp3<-nbGenesPerCond.unique(pandey.top3, 
+                          legend.title = 'Proteins within\ntissue/cell',
+                          ylab= "Number of proteins",
+                          Y=c(0,6100),
+                          legendPosition='bottom',
+                          print=FALSE,
+                          out='plot',
+                          thm=theme(axis.title.x=element_blank()))+ggtitle("Pandey")
+```
+
+
+# PPKM quantification {.tabset}
+## Shared and unique tissues across the two proteomic datasets 
+```{r DistribShareUniqueTissueProtPPKM}
+kuster.ppkm<-eval(barzinePhdData::kuster.ppkm)
+pandey.ppkm<-eval(barzinePhdData::pandey.ppkm)
+
+DrawVenn(a=kuster.ppkm,b=pandey.ppkm,
+         names=c('Kuster','Pandey'),
+         cols=datasetCol[c('Kuster','Pandey')],
+         type='colnames',
+         cat.cex=rep(2,2),
+         cex=rep(1.8,3))
+```
+
+## Shared and unique proteins across the two proteomic datasets 
+```{r DistribShareUniqueProtPPKM}
+comProt.ppkm<-intersect(colnames(kuster.ppkm),colnames(pandey.ppkm))
+kuster.oT14ppkm<-strip(kuster.top3[,comProt.ppkm])
+pandey.oT14ppkm<-strip(pandey.top3[,comProt.ppkm])
+
+DrawVenn(fontfamily='Linux Libertine',
+     a=kuster.oT14ppkm,
+     b=pandey.oT14ppkm,
+     names=names(datasetCol[7:8]),
+     cols=datasetCol[7:8],
+     type='rownames',
+     cat.cex=rep(2,2),
+     cex=rep(1.8,3))
+```
+
+
+# Protein Supersets {.tabset}
+
+## Protein found in every tissue of every dataset (ubiquitous) {.tabset}
+
+### TOP3 
+```{r ubiquitousProtein}
+ubiquitousPandey<-ubi.strict(pandey.top3)
+ubiquitousKuster<-ubi.strict(kuster.top3)
+ubiquitousCutler<-ubi.strict(cutler.top3)
+
+ubiquitousProtein<-Intersect(ubiquitousPandey,ubiquitousKuster)
+ubiquitousProteinCutler<-Intersect(ubiquitousPandey,ubiquitousKuster,ubiquitousCutler)
+```
+
+#### Common to the three proteomic datasets
+```{r nameID3D}
+DT::datatable(nameID(ubiquitousProteinCutler,out='DF'),
+              rownames = FALSE,
+              caption = 'Ubiquitous proteins common to Cutler, Kuster and Pandey (TOP3)',
+              colnames = c('Gene id'='ensembl_gene_id','Gene name' = 'hgnc_symbol'),
+              extensions = 'Buttons', 
+              options = list(
+                dom = 'Bfrtip',
+                buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                ))
+```
+
+#### Ubiquitous and common to Kuster Lab and Pandey Lab data only
+```{r nameID}
+DT::datatable(nameID(ubiquitousProtein,'DF'),
+              rownames = FALSE,
+              caption = 'Ubiquitous proteins common to Kuster and Pandey (TOP3)',
+              colnames = c('Gene id'='ensembl_gene_id','Gene name' = 'hgnc_symbol'),
+              extensions = 'Buttons', 
+              options = list(
+                dom = 'Bfrtip',
+                buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                ))
+```
+
+### PPKM
+Ubiquitous and common to Kuster Lab and Pandey Lab data only
+```{r ubiquitousProteinPPKM}
+ubiquitousPandey.ppkm<-ubi.strict(pandey.ppkm)
+ubiquitousKuster.ppkm<-ubi.strict(kuster.ppkm)
+ubiquitousPPKM<-intersect(ubiquitousPandey.ppkm,ubiquitousKuster.ppkm)
+
+DT::datatable(nameID(ubiquitousPPKM,out='DF'),
+              rownames = FALSE, 
+              caption = 'Ubiquitous proteins common to Kuster and Pandey (PPKM)',
+              colnames = c('Gene id'='ensembl_gene_id','Gene name' = 'hgnc_symbol'),
+              extensions = 'Buttons', 
+              options = list(
+                dom = 'Bfrtip',
+                buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                ))
+```
+
+
+## Protein unique (TS) {.tabset}
+```{r TissueUniqueHelpers}
+splitTissueSpe<-function(vec,verbose=FALSE){
+  cond<-unique(vec)
+  resList<-lapply(setNames(cond,cond), 
+                  function(x){
+                    if(verbose) print(paste(x,':',length(vec[vec==x])))
+                    names(vec[vec==x])
+                  })
+  return(resList)  
+}
+
+prepDTname<-function(theRes,prefix="#####"){
+    tmp<-lapply(names(theRes), function(x){
+      cat(paste(prefix,x,'\n'))
+      cat(knitr::knit_print(
+      DT::datatable(
+        data.frame(id=theRes[[x]],name=barzinePhdData::gene.mapID[theRes[[x]]]),
+        rownames = FALSE, colnames = c('Ensembl id' = 'id','Gene name' = 'name'),
+        extensions = 'Buttons', 
+        options = list(
+          dom = 'Bfrtip',
+          buttons = c('copy', 'csv', 'excel', 'pdf', 'print') 
+      ))))
+   cat("\n\n\n")
+    })
+}
+```
+
+### TOP 3 {.tabset}
+
+#### Cutler {.tabset .tabset-pills}
+```{r TSprotCutler,results="asis"}
+cutler.unique<-protSpe(cutler.top3)
+cutler.unique<-cutler.unique[!is.na(cutler.unique)]#1644 spe prot in total
+cutler.uniqueSplitted<-splitTissueSpe(cutler.unique)
+prepDTname(cutler.uniqueSplitted)
+```
+
+#### Kuster {.tabset .tabset-pills}
+```{r TSprotKuster,results="asis"}
+kuster.unique<-protSpe(kuster.top3)
+kuster.unique<-kuster.unique[!is.na(kuster.unique)]#1071 spe prot in total
+kuster.uniqueSplitted<-splitTissueSpe(kuster.unique)
+prepDTname(kuster.uniqueSplitted)
+```
+
+#### Pandey {.tabset .tabset-pills}
+```{r TSprotPandey,results="asis"}
+pandey.unique<-protSpe(pandey.top3)
+pandey.unique<-pandey.unique[!is.na(pandey.unique)]#1491 spe prot in total
+pandey.uniqueSplitted<-splitTissueSpe(pandey.unique)
+prepDTname(pandey.uniqueSplitted)
+```
+
+#### Consistent TS across the three proteomic datasets
+```{r TSprot}
+heartUnique<-Intersect(unlist(cutler.uniqueSplitted$Heart),
+                       unlist(pandey.uniqueSplitted$Heart),
+                       unlist(kuster.uniqueSplitted$Heart))
+lungUnique<-Intersect(unlist(cutler.uniqueSplitted$Lung),
+                      unlist(pandey.uniqueSplitted$Lung),
+                      unlist(kuster.uniqueSplitted$Lung))
+ovaryUnique<-Intersect(unlist(cutler.uniqueSplitted$Ovary),
+                       unlist(pandey.uniqueSplitted$Ovary),
+                       unlist(kuster.uniqueSplitted$Ovary))
+pancreasUnique<-Intersect(unlist(cutler.uniqueSplitted$Pancreas),
+                          unlist(pandey.uniqueSplitted$Pancreas),
+                          unlist(kuster.uniqueSplitted$Pancreas))
+```
+
+Number of TS protein common between Cutler Lab, Kuster Lab and Pandey Lab data for:
+
+* Heart: `r length(heartUnique)`
+* Lung: `r length(lungUnique)`
+* Ovary: `r length(ovaryUnique)`
+* Pancreas: `r length(pancreasUnique)`
+
+```{r TSprot2D}
+CommUniquePandeyKuster<-lapply(setNames(comProt.14T,comProt.14T), 
+                               function(x){
+                                # print(paste(x,':',
+                                #             length(Intersect(unlist(kuster.uniqueSplitted[x]),
+                                #                              unlist(pandey.uniqueSplitted[x])))))
+                                 return(Intersect(unlist(kuster.uniqueSplitted[x]),unlist(pandey.uniqueSplitted[x])))
+                               })
+```
+
+
+List of TS protein common between Kuster Lab and Pandey Lab data:
+```{r}
+pander::pander(CommUniquePandeyKuster)
+```
+
+
+### PPKM
+
+List of TS protein common between Kuster Lab and Pandey Lab data (PPKM):
+```{r TSprotPPKM,results="asis"}
+pandey.ppkm.unique<-protSpe(pandey.ppkm)
+kuster.ppkm.unique<-protSpe(kuster.ppkm)
+
+kuster.ppkm.unique<-kuster.ppkm.unique[!is.na(kuster.ppkm.unique)]#1987 spe prot in total
+kuster.ppkm.uniqueSplitted<-splitTissueSpe(kuster.ppkm.unique)
+
+pandey.ppkm.unique<-pandey.ppkm.unique[!is.na(pandey.ppkm.unique)]#2640 spe prot in total
+pandey.ppkm.uniqueSplitted<-splitTissueSpe(pandey.ppkm.unique)
+
+
+CommUniquePandeyKuster.ppkm<-lapply(setNames(comProt.ppkm,comProt.ppkm), 
+                               function(x){
+                                 #print(paste(x,':',
+                                 #           length(Intersect(unlist(kuster.ppkm.uniqueSplitted[x]),
+                                 #                            unlist(pandey.ppkm.uniqueSplitted[x])))))
+                                 return(Intersect(unlist(kuster.ppkm.uniqueSplitted[x]),
+                                                  unlist(pandey.ppkm.uniqueSplitted[x])))
+                               })
+pander::pander(CommUniquePandeyKuster.ppkm)
+```
+
+
+
+### Common between TOP3 and PPKM
+```{r resultsTSprot}
+Unique.PPKM.top3<-lapply(setNames(comProt.14T,comProt.14T), 
+                               function(x){
+                                 #print(paste(x,':',
+                                 #           length(Intersect(unlist(CommUniquePandeyKuster.ppkm[x]),
+                                 #                            unlist(CommUniquePandeyKuster[x])))))
+                                 return(Intersect(unlist(CommUniquePandeyKuster.ppkm[x]),
+                                                  unlist(CommUniquePandeyKuster[x])))
+                               })
+pander::pander(Unique.PPKM.top3)
+```
+
+# Technical variability prevails over biological signal: intrastudy correlations of different tissues are globally stronger than same-tissue interstudy correlations.
+
+## Correlation {.tabset}
+```{r commonProt}
+comRowProt.T4<-Intersect(rownames(cutler.top3.commonT),
+                         rownames(kuster.top3.commonT),
+                         rownames(pandey.top3.commonT))
+cutler.T4p<-cutler.top3.commonT[comRowProt.T4,]
+kuster.T4p<-kuster.top3.commonT[comRowProt.T4,]
+pandey.T4p<-pandey.top3.commonT[comRowProt.T4,]
+protT4<-cbind(suffix(cutler.T4p,'Cutler)',sep=' ('),
+              suffix(kuster.T4p,'Kuster)',sep=' ('),
+              suffix(pandey.T4p,'Pandey)',sep=' ('))
+
+
+comRowProt.T14<-intersect(rownames(kuster.oT14),rownames(pandey.oT14))
+kuster.T14p<-kuster.oT14[comRowProt.T14,]
+pandey.T14p<-pandey.oT14[comRowProt.T14,]
+protT14<-cbind(suffix(kuster.T14p,'Kuster)',sep=' ('),
+              suffix(pandey.T14p,'Pandey)',sep=' ('))
+
+```
+
+```{r commonPnoMito}
+protT4_noMito<-excludeGenes(protT4,barzinePhdData::g.mitoch)
+protT4_noMitoNoCont<-excludeGenes(protT4_noMito,ubiquitousProteinCutler)
+protT14_noMito<-excludeGenes(protT14,barzinePhdData::g.mitoch)
+```
+
+### For the 3 datasets - 4 tissues
+```{r CorrelationHeatmap}
+mHeatmapTC(protT4_noMito,
+        method='spearman',
+        RowsideMode ='extractSpace',ColsideMode = 'extractSpace',
+        common.cond=common.T4,
+        TissueCol=TissueCol,
+        datasetCol=datasetCol,
+        margins=c(8,10),key.title = 'Spearman Correlation',
+        cexRow = 1.2,cexCol = 1.2)
+
+mHeatmapTC(protT4_noMitoNoCont,
+        method='spearman',
+        RowsideMode ='extractSpace',ColsideMode = 'extractSpace',
+        common.cond=common.T4,
+        TissueCol=TissueCol,
+        datasetCol=datasetCol,
+        margins=c(8,10),key.title = 'Spearman Correlation',
+        cexRow = 1.2,cexCol = 1.2)
+
+mHeatmapTC(protT4_noMito,
+        method='pearson',
+        RowsideMode ='extractSpace',ColsideMode = 'extractSpace',
+        common.cond=common.T4,
+        TissueCol=TissueCol,
+        datasetCol=datasetCol,
+        margins=c(8,10),key.title = 'Pearson Correlation',
+        cexRow = 1.2,cexCol = 1.2)
+
+mHeatmapTC(protT4_noMitoNoCont,
+        method='pearson',
+        RowsideMode ='extractSpace',ColsideMode = 'extractSpace',
+        common.cond=common.T4,
+        TissueCol=TissueCol,
+        datasetCol=datasetCol,
+        margins=c(8,10),key.title = 'Pearson Correlation',
+        cexRow = 1.2,cexCol = 1.2)
+```
+
+### For the 2 datasets - 14 tissues 
+```{r CorrelationHeatmap14T2D}
+mHeatmapTC(protT14_noMito,
+        method='spearman',
+        RowsideMode ='extractSpace',ColsideMode = 'extractSpace2',
+        common.cond=common.T14,
+        TissueCol=TissueCol,
+        datasetCol=datasetCol,
+        margins=c(8,11),key.title = 'Spearman Correlation',
+        cexRow = 1.2,cexCol = 1.2,
+        baseFont = 'Linux Libertine')
+
+mHeatmapTC(protT14_noMito,
+        method='pearson',
+        RowsideMode ='extractSpace',ColsideMode = 'extractSpace2',
+        common.cond=common.T14,
+        TissueCol=TissueCol,
+        datasetCol=datasetCol,
+        margins=c(8,11),key.title = 'Pearson Correlation',
+        cexRow = 1.2,cexCol = 1.2,
+        baseFont = "Linux Libertine")
+
+```
+
+### Scatterplots 
+
+```{r 3Dprotscatter}
+scatplot.log2(protT4_noMito,x="Heart (Cutler)",y="Heart (Pandey)", title="Pandey ~ Cutler:  Heart",xlabs='Cutler',ylab='Pandey',dealWithSpace = TRUE,max=-4,min=-20,xcor=-10,ycor=-5,family='Linux Libertine')
+
+scatplot.log2(protT4_noMito,x="Heart (Kuster)",y="Heart (Pandey)", title="Pandey ~ Kuster:  Heart",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20,xcor=-10,ycor=-5,family='Linux Libertine')
+
+
+scatplot.log2(protT4_noMito,x="Lung (Cutler)",y="Lung (Pandey)", title="Pandey ~ Cutler:  Lung",xlabs='Cutler',ylab='Pandey',dealWithSpace = TRUE,max=-4,min=-20,xcor=-10,ycor=-5,family='Linux Libertine')
+
+scatplot.log2(protT4_noMito,x="Lung (Cutler)",y="Pancreas (Cutler)", title="Cutler: Pancreas ~ Lung",xlabs='Lung',ylab='Pancreas',dealWithSpace = TRUE,max=-3,min=-20,xcor=-10,ycor=-3.8,family='Linux Libertine')
+
+scatplot.log2(protT4_noMito,x="Lung (Pandey)",y="Pancreas (Pandey)", title="Pandey: Pancreas ~ Lung",xlabs='Lung',ylab='Pancreas',dealWithSpace = TRUE,max=-3,min=-20,xcor=-10,ycor=-4,family='Linux Libertine')
+
+scatplot.log2(protT4_noMito,x="Ovary (Cutler)",y="Pancreas (Cutler)", title="Cutler: Pancreas ~ Ovary",xlabs='Ovary',ylab='Pancreas',dealWithSpace = TRUE,max=-3,min=-20,xcor=-10,ycor=-4,family='Linux Libertine')
+
+scatplot.log2(protT4_noMito,x="Ovary (Pandey)",y="Pancreas (Pandey)", title="Pandey: Pancreas ~ Ovary",xlabs='Ovary',ylab='Pancreas',dealWithSpace = TRUE,max=-3,min=-20,xcor=-10,ycor=-3.8,family='Linux Libertine')
+```
+
+```{r more2DprotScatter}
+scatplot.log2(protT14_noMito,x="Heart (Kuster)",y="Heart (Pandey)", title="Pandey ~ Kuster:  Heart",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Lung (Kuster)",y="Lung (Pandey)", title="Pandey ~ Kuster:  Lung",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Kidney (Kuster)",y="Kidney (Pandey)", title="Pandey ~ Kuster:  Kidney",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Placenta (Kuster)",y="Placenta (Pandey)", title="Pandey ~ Kuster:  Placenta",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Liver (Kuster)",y="Liver (Pandey)", title="Pandey ~ Kuster:  Liver",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Adrenal (Kuster)",y="Adrenal (Pandey)", title="Pandey ~ Kuster:  Adrenal",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Gallbladder (Kuster)",y="Gallbladder (Pandey)", title="Pandey ~ Kuster:  Gallbladder",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Pancreas (Kuster)",y="Pancreas (Pandey)", title="Pandey ~ Kuster:  Pancreas",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Pancreas (Kuster)",y="Colon (Kuster)", title="Kuster: Colon ~ Pancreas",xlabs='Colon',ylab='Pancreas',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Pancreas (Kuster)",y="Adrenal (Kuster)", title="Kuster:  Adrenal ~ Pancreas",xlabs='Kuster',ylab='Pandey',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+
+scatplot.log2(protT14_noMito,x="Pancreas (Kuster)",y="Adrenal (Pandey)", title="Pandey Adrenal ~ Kuster Pancreas",xlabs='Pancreas (Kuster)',ylab='Adrenal (Pandey)',dealWithSpace = TRUE,max=-3,min=-20.2,xcor=-11,ycor=-3.5,family='Linux Libertine')
+```
+
+
+## New quantification method
+### Pandey data
+#### Distribution barplots (per tissue)
+
+```{r SameColumns}
+colPandey<-intersect(colnames(pandey.top3),colnames(pandey.ppkm))
+selectedTissues<-c("Testis", "Ovary", "Pancreas", "Prostate",
+                   "Liver", "Colon", "Urinarybladder", "Adrenal", 
+                   "Rectum","Gallbladder", "Kidney", "Placenta", 
+                   "Lung", "Heart", "Oesophagus")
+```
+
+```{r firstquantification}
+tm3<-nbGenesPerCond.unique(pandey.top3[,selectedTissues],
+                           legend.title = 'Proteins within tissue/cell',
+                           ylab= "Number of proteins",xlab='Tissue or Cell type')
+```
+
+```{r distributionPlotQ2} 
+tm3b<-nbGenesPerCond.unique(pandey.ppkm[,selectedTissues],
+                            legend.title = 'Proteins within tissue/cell',
+                            ylab= "Number of proteins",xlab='Tissue or Cell type')
+```
+
+
+```{r compareQ1Q2b}
+tm3b$variable<-factor(tm3b$variable,levels=levels(tm3$variable))
+
+comp.q1q2<-rbind(data.frame(Quantification='Q1',tm3),
+                 data.frame(Quantification='Q2',tm3b))
+
+comp.q1q2$Color<-paste(comp.q1q2$Quantification,comp.q1q2$unique,sep='.')
+comp.q1q2$Color<-as.factor(comp.q1q2$Color)
+comp.q1q2$Color<-factor(comp.q1q2$Color, 
+                        levels=c("Q1.Tissue/cell specific",
+                                 "Q1.Unspecific to tissue or cell",
+                                 "Q2.Tissue/cell specific",
+                                 "Q2.Unspecific to tissue or cell"))
+
+colnames(comp.q1q2)<-c("Quantification","ID", "Tissue", "value","unique","Color")
+
+comp.q1q2$TM<-paste(comp.q1q2$Tissue,comp.q1q2$Quantification,sep=' - ')
+comp.q1q2$TM<-as.factor(comp.q1q2$TM)
+comp.q1q2$TM<-factor(comp.q1q2$TM, 
+                      levels=c("Testis - Q1", "Testis - Q2",
+                               "Ovary - Q1", "Ovary - Q2",
+                               "Pancreas - Q1", "Pancreas - Q2",
+                               "Prostate - Q1","Prostate - Q2",
+                               "Liver - Q1", "Liver - Q2",
+                               "Colon - Q1", "Colon - Q2",
+                               "Urinarybladder - Q1", "Urinarybladder - Q2",
+                               "Adrenal - Q1", "Adrenal - Q2",
+                               "Rectum - Q1", "Rectum - Q2",
+                               "Gallbladder - Q1","Gallbladder - Q2",
+                               "Kidney - Q1", "Kidney - Q2",
+                               "Placenta - Q1", "Placenta - Q2",
+                               "Lung - Q1", "Lung - Q2",
+                               "Heart - Q1", "Heart - Q2",
+                               "Oesophagus - Q1", "Oesophagus - Q2"))
+```
+
+```{r creationPalette}
+colorPaletteUnique<-setNames(c("#F8766D",  "#00BFC4", "#7CAE00","#C77CFF"),
+                             c("Q1.Tissue/cell specific",
+                               "Q1.Unspecific to tissue or cell",
+                               "Q2.Tissue/cell specific",
+                               "Q2.Unspecific to tissue or cell"))
+```
+
+```{r plot4}
+p4 <- ggplot(comp.q1q2,aes(TM,y=..count..,fill=Color))+geom_bar()
+p4 <- p4 + theme_bw(base_size=14)
+p4 <- p4 + scale_fill_manual(values=colorPaletteUnique,drop=FALSE, 
+                             labels=c("Unique in data quantified by the first method (Q1)",
+                                      "Not unique in data quantified by the first method (Q1)",
+                                      "Unique in data quantified by the new method (Q2)",
+                                      "Not unique in data quantified by the new method (Q2)"))
+p4 <- p4 + theme(axis.text.x=element_text(angle=45,hjust = 1),plot.title=element_text(hjust=0.5))+theme(legend.position = 'bottom',legend.title=element_text(size=10),legend.text = element_text(size=9.5))
+p4 <- p4+xlab('Tissue')+guides(fill=guide_legend(title='Protein is',nrow=2))+ylab('Number of proteins')
+p4
+```
+
+
+#### Density plots
+```{r densityPlot}
+density_plot<-function(DF,log2=TRUE,pseudocount=0,valueLab='Normalised Top3 PSM',
+                       baseFont='Linux Libertine',condCol,fontSize=11,
+                       publish=TRUE,title,
+                       coord,xmin,xmax,ymin,ymax,removeLegend=FALSE,thm,
+                       ylab){
+  DF_lg<-reshape2::melt(DF)
+  colnames(DF_lg)<-c('Tissue','value')
+  
+  if(log2) {
+    if(pseudocount!=0)
+      valueLab=paste0('Log2(',valueLab,' + ',pseudocount,')')
+      else
+      valueLab=paste0('Log2(',valueLab,')')
+  }
+  
+  if(log2){
+        p <- ggplot(DF_lg,aes(log2(value+pseudocount),fill=Tissue,colour=Tissue)) + geom_density(alpha=0.2)
+      }else{
+        p <- ggplot(DF_lg,aes(value,fill=Tissue,colour=Tissue)) + geom_density(alpha=0.2)
+      }
+      p <- p + xlab(valueLab)
+      if(!missing(ylab)) p <- p + ylab(ylab)
+      p <- p + scale_fill_manual(values=condCol)+ scale_colour_manual(values=condCol)
+      p <- p + theme_bw(base_size = fontSize,base_family = baseFont)
+      if(!missing(coord)) p <- p + coord_cartesian(xlim=c(xmin,xmax),ylim=c(ymin,ymax))
+      if(publish) p<- p + theme_bw(base_family = baseFont)
+      if(!missing(thm)) p<- p + thm
+      p <- p+theme(plot.background = element_rect(fill = "transparent"))
+      if(!missing(title)) p <- p + ggtitle(title)+theme(plot.title=element_text(hjust=0.5))
+      if(removeLegend) p <- p+ theme(legend.position='none')
+      return(p)
+}
+```
+```{r densityplotQ1Q2}
+densPlot1<-density_plot(pandey.top3[,selectedTissues],
+                        condCol=TissueCol,removeLegend = TRUE,
+                        title='First quantification (Q1)')
+densPlot2<-density_plot(pandey.ppkm[,selectedTissues],
+                        condCol=TissueCol,valueLab = 'PPKM', title='New quantification (Q2)')
+```
+
+```{r density}
+gridExtra::grid.arrange(densPlot1,densPlot2,ncol=2,widths=c(1,1.5))
+```
+
+### New heatmap (For the 2 PPKM datasets - 14 tissues)
+#### Preparation
+```{r prepHeatmapPPKM}
+common.T14.ppkm<-Intersect(colnames(pandey.ppkm),colnames(kuster.ppkm))
+kuster.ppkm.T14<-strip(kuster.ppkm[,common.T14.ppkm])
+pandey.ppkm.T14<-strip(pandey.ppkm[,common.T14.ppkm])
+
+comRowProt.ppkm.14T<-intersect(rownames(pandey.ppkm.T14),rownames(kuster.ppkm.T14))
+
+kuster.ppkm.T14<-kuster.ppkm.T14[comRowProt.ppkm.14T,]
+pandey.ppkm.T14<-pandey.ppkm.T14[comRowProt.ppkm.14T,]
+prot.ppkm.T14<-cbind(suffix(kuster.ppkm.T14,'Kuster)',sep=' ('),
+               suffix(pandey.ppkm.T14,'Pandey)',sep=' ('))
+prot.ppkm.T14_noMito<-excludeGenes(prot.ppkm.T14,barzinePhdData::g.mitoch)
+```
+
+#### Plots
+```{r CorrelationHeatmap14T}
+mHeatmapTC(prot.ppkm.T14_noMito,
+        method='spearman',
+        RowsideMode ='extractSpace',ColsideMode = 'extractSpace2',
+        common.cond=common.T14.ppkm,
+        TissueCol=TissueCol,
+        datasetCol=datasetCol,
+        margins=c(8,10),key.title = 'Spearman Correlation',
+        cexRow = 1.2,cexCol = 1.2,
+        baseFont = "Linux Libertine")
+
+mHeatmapTC(prot.ppkm.T14_noMito,
+        method='pearson',
+        RowsideMode ='extractSpace',ColsideMode = 'extractSpace2',
+        common.cond=common.T14.ppkm,
+        TissueCol=TissueCol,
+        datasetCol=datasetCol,
+        margins=c(8,10),key.title = 'Pearson Correlation',
+        cexRow = 1.2,cexCol = 1.2,
+        baseFont = 'Linux Libertine')
+```
+
+## Presence of ORs ?
+
+```{r querylist}
+queryList<-c('OR6P1','OR1K1','OR6C75','OR2M4','OR9A2','OR52A5','OR11A1','OR1L1',
+             'OR2A7','OR6N2','OR1A2','OR4E2','OR5K2','OR5C1','OR13C8','OR7C2',
+             'OR51A4','OR4C13','OR4X2','OR56A3','OR2T11','OR5K4','OR5K1','OR1M1',
+             'OR4A15','OR5K4','OR4P4','OR14I1','OR7A17','OR2W3','OR2T5','OR5I1',
+             'OR9I1','OR3A1','OR5K4','OR2T33','OR6C1','OR51E2','OR51F1','OR1L4',
+             'OR4A15','OR5T2','OR10G4',
+             #from the picture on the paper:
+             'OR10A2','OR10A5','OR10A7','OR10G4','OR10K1','OR10K2',
+             'OR10Q1','OR10Z1','OR11A1','OR11G2','OR12D2','OR12D3',
+             'OR13C3','OR13C4','OR13C8','OR13G1')
+queryList<-unique(queryList)
+```
+
+```{r}
+ensV=biomaRt::useMart("ensembl",dataset="hsapiens_gene_ensembl")
+ORIDs<-biomaRt::getBM(attributes=c("ensembl_gene_id","external_gene_name"),
+             mart=ensV,
+             filters="external_gene_name",
+             values=queryList)
+rownames(ORIDs)<-ORIDs$ensembl_gene_id
+DT::datatable(ORIDs)
+ORIDens<-unique(ORIDs$ensembl_gene_id)
+```
+
+```{r simplequery}
+length(intersect(rownames(ORIDs),rownames(cutler.top3)))
+length(intersect(rownames(ORIDs),rownames(pandey.top3)))
+length(intersect(rownames(ORIDs),rownames(kuster.top3)))
+length(intersect(rownames(ORIDs),rownames(pandey.ppkm)))
+intersect(rownames(ORIDs),rownames(pandey.ppkm))
+length(intersect(rownames(ORIDs),rownames(kuster.ppkm)))
+intersect(rownames(ORIDs),rownames(kuster.ppkm))
+```
+
+```{r heatmapPandeyQ1}
+heatmap.2(log2(as.matrix(pandey.ppkm[intersect(rownames(ORIDs),rownames(pandey.ppkm)),]+1)),
+          scale="none",
+          key=T,keysize=1.5, density.info="none", trace="none",
+          labRow =ORIDs[c("ENSG00000148136","ENSG00000170929", "ENSG00000258817"),"hgnc_symbol"],
+          srtCol = 45,cexRow=1,
+          margins = c(8,8),
+          col=colorRampPalette(c('aliceblue','darkcyan'),bias=3),
+          dendrogram = 'none',key.xlab = 'log2(PPKM+1)'#,
+          )
+
+pandey.ppkm[intersect(rownames(ORIDs),rownames(pandey.ppkm)),c('Kidney','Liver')]
+```
+
+##Other
+### Scatter plot
+
+```{r testScatplot}
+
+protT4_noMito2<-protT4_noMito
+colnames(protT4_noMito2)<-gsub('\\(','',colnames(protT4_noMito2))
+colnames(protT4_noMito2)<-gsub('\\)','',colnames(protT4_noMito2))
+colnames(protT4_noMito2)<-gsub(' ','',colnames(protT4_noMito2))
+
+scatplot.log2(protT4_noMito2, x="HeartKuster",y="HeartPandey", xlabs= "Kuster",ylabs='Pandey',title="Heart: Pandey ~ Kuster",xmin=-20,ymin=-20,xmax=0,ymax=0)
+```
+
+
+
+
