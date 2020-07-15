@@ -1,0 +1,19 @@
+---
+title: 'Supplementaries for Chapter 3'
+author: "Mitra Barzine"
+date: "2020"
+output: 
+  html_document:
+    code_folding: hide
+    number_sections: true
+    theme: united
+    highlight: pygments
+    smart: true
+    css: ../styles.css
+    includes:
+      after_body: ../footer.html
+---
+
+All the different analyses presented in the chapter 3 of the thesis are going to be available through an [app](http://barzine.net/shiny/mitra/thesis/chapter3/).
+
+[Please see the app](http://barzine.net/shiny/mitra/thesis/chapter3/)
