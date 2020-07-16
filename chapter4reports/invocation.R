@@ -13,7 +13,7 @@ report4chap4<-function(set="1",
                        #remove0,
                        newDir=FALSE,
                        setWorkingDir=TRUE,
-                       workingDir=paste($HOME,'/phd-analyses/chapter4')
+                       workingDir='phd-analyses/chapter4'
                        ){
 
   #Comparison between 5 or 2 studies: 5DF for castle, brawand, ibm, uhlen and gtex
