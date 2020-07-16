@@ -26,7 +26,7 @@ report4chap6_tissue<-function(set="1",
                        remove0=FALSE,
                        newDir=FALSE,
                        setWorkingDir=TRUE,
-                       workingDir='/hps/nobackup2/ma/mitra/phd-analysis/chapter6'
+                       workingDir='phd-analysis/chapter6'
 ){
 
   #Comparison between 3 or 2 studies: 3DF for pandey, uhlen and gtex,
