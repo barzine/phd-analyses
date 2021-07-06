@@ -19,6 +19,10 @@ The most notable prerequisite that is not handled by the installation of [`barzi
 See [Install help](#install-help) for some pointers.
 ______
 
+## Note
+Due to the huge amount of files and loss of the primary server, the list of genes are not available directly at the moment. You can either email or rerun the scripts.
+I am integrating everything into a shiny app, but this won't be done in the near future.
+
 ## Chapter 2: Available high-throughput normal human datasets
  - additional configuration files for the transcriptomic RNA-seq studies, except for GTEx:
 [configuration files](chapter2/irap-configuration-files) used for [irap](https://github.com/nunofonseca/irap/releases/tag/v1.0.6b)
