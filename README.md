@@ -69,6 +69,6 @@ Most analyses won't require it, but `barzinePhdR` requires it.
 
 ```{r}
     install.packages('remotes')
-    remotes::install_github(c('barzine/barzinePhdR','barzine/barzinePhdData')
+    remotes::install_github(c('barzine/barzinePhdR','barzine/barzinePhdData'))
 ```
 
