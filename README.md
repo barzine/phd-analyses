@@ -68,7 +68,7 @@ If you use Rstudio, it should come bundled with it.
 Most analyses won't require it, but `barzinePhdR` requires it.
 
 ```{r}
-    install.packages(remotes)
+    install.packages('remotes')
     remotes::install_github(c('barzine/barzinePhdR','barzine/barzinePhdData')
 ```
 
